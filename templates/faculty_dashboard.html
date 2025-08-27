@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1 class="mb-4">Faculty Dashboard</h1>
+<p class="lead mb-4">Welcome, {{ current_user.full_name }}!</p>
+
+<div class="card mb-4 p-4"> {# Added p-4 #}
+    <h3 class="mb-3">Actions</h3> {# Added mb-3 #}
+    <a href="{{ url_for('take_attendance') }}" class="btn btn-primary">Take Student Attendance</a>
+    <a href="{{ url_for('view_attendance') }}" class="btn btn-info">View Student Attendance</a>
+</div>
+
+<div class="card p-4"> {# Added p-4 #}
+    <h3 class="mb-3">Approved Students</h3> {# Added mb-3 #}
+    {% if students %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Stream</th>
+                    <th>Semester</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>{{ student.full_name }}</td>
+                    <td>{{ student.username }}</td>
+                    <td>{{ student.stream or 'N/A' }}</td>
+                    <td>{{ student.sem or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>No approved students found.</p>
+    {% endif %}
+</div>
+{% endblock %}

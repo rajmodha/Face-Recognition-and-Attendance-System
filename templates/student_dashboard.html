@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card text-center p-4"> {# Added p-4 #}
+    <h1 class="mb-4">Student Dashboard</h1>
+    <p class="lead mb-4">Welcome, {{ current_user.full_name }}!</p>
+    <hr class="my-4">
+    <h3 class="mb-3">View Your Attendance</h3> {# Added mb-3 #}
+    <p>Click the button below to see your attendance records.</p>
+    <a href="{{ url_for('view_attendance') }}" class="btn btn-info">View My Attendance</a>
+</div>
+{% endblock %}

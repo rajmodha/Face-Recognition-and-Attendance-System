@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body p-4"> {# Added p-4 for more padding #}
+                <h2 class="card-title text-center mb-4">Login</h2>
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required> {# Removed class="form-control" #}
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required> {# Removed class="form-control" #}
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Login</button> {# Added w-100 for full width #}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

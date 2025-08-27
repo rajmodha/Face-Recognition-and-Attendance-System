@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="hero">
+    <h1>Welcome to the Face Recognition Attendance System</h1>
+    <p>
+        An intelligent, seamless, and secure way to track attendance.
+        Log in or register to get started.
+    </p>
+    {% if not current_user.is_authenticated %}
+    <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
+    <a href="{{ url_for('register') }}" class="btn btn-secondary">Register as Student</a>
+    {% endif %}
+</div>
+{% endblock %}

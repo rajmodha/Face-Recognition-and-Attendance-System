@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="text-center">
+    <div class="card p-4">
+        <h1 class="mb-4">Take Attendance</h1>
+        <p class="lead mb-4">The system will automatically detect and mark attendance for recognized students.</p>
+        
+        <div class="form-group">
+            <label for="subject">Select Subject:</label>
+            <select id="subject" name="subject">
+                {% for subject in subjects %}
+                    <option value="{{ subject }}">{{ subject }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="stream">Select Stream:</label>
+            <select id="stream" name="stream">
+                {% for stream in streams %}
+                    <option value="{{ stream }}">{{ stream }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="sem">Select Semester:</label>
+            <select id="sem" name="sem">
+                {% for sem in sems %}
+                    <option value="{{ sem }}">{{ sem }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button id="startButton" class="btn btn-primary mb-4">Start Camera</button>
+        
+        <div id="video-container" class="video-wrapper" style="display: none;">
+            <img src="" id="video-feed" class="video-feed-img">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const startButton = document.getElementById('startButton');
+    const videoContainer = document.getElementById('video-container');
+    const videoFeed = document.getElementById('video-feed');
+    const subjectSelect = document.getElementById('subject');
+    const streamSelect = document.getElementById('stream');
+    const semSelect = document.getElementById('sem');
+    let isCameraOn = false;
+
+    startButton.addEventListener('click', function() {
+        isCameraOn = !isCameraOn;
+        const selectedSubject = subjectSelect.value;
+        const selectedStream = streamSelect.value;
+        const selectedSem = semSelect.value;
+
+        if (isCameraOn) {
+            videoContainer.style.display = 'block';
+            videoFeed.src = `{{ url_for('video_feed') }}?subject=${selectedSubject}&stream=${selectedStream}&sem=${selectedSem}`;
+            startButton.textContent = 'Stop Camera';
+            startButton.classList.remove('btn-primary');
+            startButton.classList.add('btn-danger');
+        } else {
+            videoContainer.style.display = 'none';
+            videoFeed.src = '';
+            startButton.textContent = 'Start Camera';
+            startButton.classList.remove('btn-danger');
+            startButton.classList.add('btn-primary');
+        }
+    });
+</script>
+{% endblock %}

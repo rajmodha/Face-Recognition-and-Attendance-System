@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Edit User: <strong>{{ user.username }}</strong></h3>
+            </div>
+            <div class="card-body p-4"> {# Added p-4 #}
+                <form action="{{ url_for('edit_user', role=user.role, user_id=user.id) }}" method="POST">
+                    <div class="form-group">
+                        <label for="full_name">Full Name</label>
+                        <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}" required> {# Removed class="form-control" #}
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" value="{{ user.username }}" required> {# Removed class="form-control" #}
+                    </div>
+
+                    {% if user.role == 'student' %}
+                    <div class="form-group">
+                        <label for="stream">Stream</label>
+                        <input type="text" id="stream" name="stream" value="{{ user.stream or '' }}"> {# Removed class="form-control" #}
+                    </div>
+                    <div class="form-group">
+                        <label for="sem">Semester</label>
+                        <input type="text" id="sem" name="sem" value="{{ user.sem or '' }}"> {# Removed class="form-control" #}
+                    </div>
+                    {% elif user.role == 'faculty' %}
+                    <div class="form-group">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject" value="{{ user.subject or '' }}"> {# Removed class="form-control" #}
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label for="password">New Password</label>
+                        <input type="password" id="password" name="password" placeholder="Leave blank to keep current password"> {# Removed class="form-control" #}
+                        <small class="form-text text-muted">If you fill this in, the user's password will be changed.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="role">Role</label>
+                        <input type="text" id="role" name="role" value="{{ user.role|capitalize }}" readonly> {# Removed class="form-control" #}
+                    </div>
+                    <hr>
+                    <button type="submit" class="btn btn-primary">Update User</button>
+                    <a href="{{ url_for('manage_users') }}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

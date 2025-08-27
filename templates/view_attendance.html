@@ -1,0 +1,104 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1 class="mb-4">View Attendance</h1>
+
+{% if current_user.role == 'student' %}
+    {# Student Calendar View #}
+    <div class="card mb-4 p-4"> {# Added p-4 #}
+        <form method="POST" class="form-inline">
+            <div class="form-group mr-2">
+                <label for="month" class="mr-2">Month:</label>
+                <select id="month" name="month">
+                    {% for i in range(1, 13) %}
+                        <option value="{{ i }}" {% if i == month %}selected{% endif %}>{{ i }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group mr-2">
+                <label for="year" class="mr-2">Year:</label>
+                <input type="number" id="year" name="year" value="{{ year }}">
+            </div>
+            <button type="submit" class="btn btn-primary">View</button>
+        </form>
+    </div>
+
+    <div class="card p-4"> {# Added p-4 #}
+        <div class="calendar">
+            <div class="calendar-header">
+                <h2>{{ month }}/{{ year }}</h2>
+            </div>
+            <div class="calendar-body">
+                <div class="calendar-grid">
+                    {% for day in range(1, days_in_month + 1) %}
+                        <div class="calendar-day {% if day in holidays %}holiday{% elif day in attendance_data %}present{% endif %}">
+                            <p>{{ day }}</p>
+                            {% if day in attendance_data and day not in holidays %}
+                                <ul>
+                                    {% for subject in attendance_data[day] %}
+                                        <li>{{ subject }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% elif day in holidays %}
+                                <p class="holiday-text">Holiday</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    {# Admin/Faculty Table View #}
+    <div class="card mb-4 p-4"> {# Added p-4 #}
+        <form method="POST" class="form-inline">
+            <div class="form-group mr-2">
+                <label for="date" class="mr-2">Select Date:</label>
+                <input type="date" id="date" name="date" value="{{ selected_date }}"> {# Removed class="form-control" #}
+            </div>
+            <div class="form-group mr-2">
+                <label for="subject" class="mr-2">Select Subject:</label>
+                <select id="subject" name="subject"> {# Removed class="form-control" #}
+                    <option value="all">All Subjects</option>
+                    {% for subject in subjects %}
+                        <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>{{ subject }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">View Records</button>
+        </form>
+    </div>
+
+    <div class="card p-4"> {# Added p-4 #}
+        <h3 class="mb-3">Attendance for: {{ selected_date }}</h3> {# Added mb-3 #}
+        {% if attendance_data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Time</th>
+                            <th>Taken By</th>
+                            <th>Subject</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_data %}
+                            <tr>
+                                <td>{{ record.name }}</td>
+                                <td>{{ record.timestamp }}</td>
+                                <td>{{ record.taken_by or 'N/A' }}</td>
+                                <td>{{ record.subject or 'N/A' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <p>No attendance records found for this date and subject.</p>
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}

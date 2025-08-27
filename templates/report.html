@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container">
+    <h1 class="text-center my-4">Generate Attendance Report</h1>
+    <div class="card p-4">
+        <form method="POST" action="{{ url_for('report') }}">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="stream">Select Stream:</label>
+                        <select id="stream" name="stream" class="form-control">
+                            {% for stream in streams %}
+                                <option value="{{ stream }}" {% if stream == selected_stream %}selected{% endif %}>{{ stream }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="sem">Select Semester:</label>
+                        <select id="sem" name="sem" class="form-control">
+                            {% for sem in sems %}
+                                <option value="{{ sem }}" {% if sem == selected_sem %}selected{% endif %}>{{ sem }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="subject">Select Subject:</label>
+                        <select id="subject" name="subject" class="form-control">
+                            {% for subject in subjects %}
+                                <option value="{{ subject }}" {% if subject == selected_subject %}selected{% endif %}>{{ subject }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary">Get Students</button>
+            </div>
+        </form>
+    </div>
+
+    {% if students %}
+    <div class="card p-4 mt-4">
+        <h2 class="text-center">Students</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>{{ student.full_name }}</td>
+                    <td>
+                        <a href="{{ url_for('generate_report', student_id=student.id, subject=selected_subject, stream=selected_stream, sem=selected_sem) }}" class="btn btn-success">Download Report</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
