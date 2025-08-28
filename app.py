@@ -462,7 +462,7 @@ def generate_frames(faculty_name, subject, student_names):
             if blink_counter >= blinks_required:
                 challenge_passed = True
         else:
-            cv2.putText(frame, "Liveness Check Passed! Identifying...", (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0), 2)
+            cv2.putText(frame, "Liveness Check Passed!", (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0), 2)
             small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
             rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
             face_locations = face_recognition.face_locations(rgb_small_frame)
