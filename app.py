@@ -505,15 +505,25 @@ def generate_frames(faculty_name, subject, student_names):
 @app.route('/take_attendance')
 @login_required
 def take_attendance():
-    if current_user.role != 'faculty':
+    if current_user.role not in ['faculty', 'admin']:
         flash('You are not authorized to take attendance.', 'danger')
         return redirect(url_for('index'))
-    faculty_subjects = []
-    if current_user.subject:
-        faculty_subjects = [subject.strip() for subject in current_user.subject.split(',')]
+    
+    subjects = set()
+    if current_user.role == 'faculty':
+        if current_user.subject:
+            subjects.update([s.strip() for s in current_user.subject.split(',')])
+    elif current_user.role == 'admin':
+        # Admin gets all subjects from all faculty
+        all_faculty = Faculty.query.all()
+        for f in all_faculty:
+            if f.subject:
+                subjects.update([s.strip() for s in f.subject.split(',')])
+
+    all_subjects = sorted(list(subjects))
     all_streams = sorted([str(item[0]) for item in db.session.query(Student.stream).distinct()])
     all_sems = sorted([str(item[0]) for item in db.session.query(Student.sem).distinct()])
-    return render_template('take_attendance.html', subjects=sorted(faculty_subjects), streams=all_streams, sems=all_sems)
+    return render_template('take_attendance.html', subjects=sorted(all_subjects), streams=all_streams, sems=all_sems)
 
 
 # (The rest of your routes: video_feed, view_attendance, etc., remain the same)
