@@ -1,10 +1,10 @@
 {% extends "layout.html" %}
+
 {% block content %}
 <div class="text-center">
     <div class="card p-4">
         <h1 class="mb-4">Take Attendance</h1>
-        <p class="lead mb-4">The system will automatically detect and mark attendance for recognized students.</p>
-        
+
         <div class="form-group">
             <label for="subject">Select Subject:</label>
             <select id="subject" name="subject">
@@ -32,7 +32,11 @@
             </select>
         </div>
 
-        <button id="startButton" class="btn btn-primary mb-4">Start Camera</button>
+        <div id="statusMessage" class="alert alert-info" role="alert">
+            Select filters and click "Start Scanning" to begin.
+        </div>
+
+        <button id="controlButton" class="btn btn-primary mb-4">Start Scanning</button>
         
         <div id="video-container" class="video-wrapper" style="display: none;">
             <img src="" id="video-feed" class="video-feed-img">
@@ -43,33 +47,57 @@
 
 {% block scripts %}
 <script>
-    const startButton = document.getElementById('startButton');
-    const videoContainer = document.getElementById('video-container');
-    const videoFeed = document.getElementById('video-feed');
-    const subjectSelect = document.getElementById('subject');
-    const streamSelect = document.getElementById('stream');
-    const semSelect = document.getElementById('sem');
-    let isCameraOn = false;
+    document.addEventListener('DOMContentLoaded', function() {
+        const controlButton = document.getElementById('controlButton');
+        const videoContainer = document.getElementById('video-container');
+        const videoFeed = document.getElementById('video-feed');
+        const statusMessage = document.getElementById('statusMessage');
+        const subjectSelect = document.getElementById('subject');
+        const streamSelect = document.getElementById('stream');
+        const semSelect = document.getElementById('sem');
 
-    startButton.addEventListener('click', function() {
-        isCameraOn = !isCameraOn;
-        const selectedSubject = subjectSelect.value;
-        const selectedStream = streamSelect.value;
-        const selectedSem = semSelect.value;
+        controlButton.addEventListener('click', function() {
+            const subject = subjectSelect.value;
+            const stream = streamSelect.value;
+            const sem = semSelect.value;
 
-        if (isCameraOn) {
-            videoContainer.style.display = 'block';
-            videoFeed.src = `{{ url_for('video_feed') }}?subject=${selectedSubject}&stream=${selectedStream}&sem=${selectedSem}`;
-            startButton.textContent = 'Stop Camera';
-            startButton.classList.remove('btn-primary');
-            startButton.classList.add('btn-danger');
-        } else {
-            videoContainer.style.display = 'none';
-            videoFeed.src = '';
-            startButton.textContent = 'Start Camera';
-            startButton.classList.remove('btn-danger');
-            startButton.classList.add('btn-primary');
-        }
+            if (!subject || !stream || !sem) {
+                alert("Please select a subject, stream, and semester.");
+                return;
+            }
+
+            const currentState = controlButton.getAttribute('data-state');
+
+            if (currentState === 'scanning') {
+                controlButton.setAttribute('data-state', 'not scanning');
+                // --- This runs when you click "Next Student" ---
+                // Reload the video feed to start a new liveness check cycle.
+                // A timestamp prevents the browser from caching the URL, ensuring a fresh request.
+                videoFeed.src = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&t=${new Date().getTime()}`;
+                statusMessage.className = 'alert alert-info';
+                statusMessage.innerText = 'Ready for next student. Click again to start.';
+            } else {
+                // --- This runs when you click "Start Scanning" for the first time ---
+                videoContainer.style.display = 'block';
+                
+                // Construct the initial URL to start the feed and reset the backend state
+                const initialUrl = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&start=true`;
+                videoFeed.src = initialUrl;
+                
+                statusMessage.className = 'alert alert-warning';
+                statusMessage.innerText = 'Initializing... Please wait for instructions.';
+                
+                // Update button state
+                controlButton.textContent = 'Next Student';
+                controlButton.className = 'btn btn-success btn-lg';
+                controlButton.setAttribute('data-state', 'scanning');
+
+                // Disable filters
+                subjectSelect.disabled = true;
+                streamSelect.disabled = true;
+                semSelect.disabled = true;
+            }
+        });
     });
 </script>
 {% endblock %}
