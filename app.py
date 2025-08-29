@@ -253,6 +253,33 @@ def approve_student(student_id):
     load_known_faces()
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/decline_student/<int:student_id>', methods=['POST'])
+@login_required
+def decline_student(student_id):
+    if current_user.role != 'admin':
+        flash('You are not authorized to perform this action.', 'danger')
+        return redirect(url_for('index'))
+    
+    student = db.get_or_404(Student, student_id)
+    
+    # Remove image file if it exists
+    if hasattr(student, 'image_path') and student.image_path:
+        try:
+            image_path = os.path.join(project_dir, 'static', student.image_path)
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        except Exception as e:
+            print(f"Error deleting image for {student.username}: {e}")
+
+    # Remove encoding if it exists (using username as per recent changes)
+    remove_user_encoding(student.username)
+    load_known_faces() # Reload encodings after removal
+
+    db.session.delete(student)
+    db.session.commit()
+    flash(f'Student {student.full_name} has been declined and deleted.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/add_faculty', methods=['POST'])
 @login_required
 def add_faculty():
