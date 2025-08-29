@@ -15,6 +15,14 @@ class Admin(UserMixin, db.Model):
     def get_id(self):
         return f'admin-{self.id}'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'full_name': self.full_name,
+            'role': self.role
+        }
+
     def __repr__(self): #Makes the object printable
         return f'<Admin {self.username}>'
 
@@ -29,6 +37,15 @@ class Faculty(UserMixin, db.Model):
 
     def get_id(self):
         return f'faculty-{self.id}'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'full_name': self.full_name,
+            'subject': self.subject,
+            'role': self.role
+        }
 
     def __repr__(self): 
         return f'<Faculty {self.username}>' 
@@ -46,6 +63,17 @@ class Student(UserMixin, db.Model):
 
     def get_id(self):
         return f'student-{self.id}'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'full_name': self.full_name,
+            'stream': self.stream,
+            'sem': self.sem,
+            'is_approved': self.is_approved,
+            'role': self.role
+        }
 
     def __repr__(self):
         return f'<Student {self.username}>'

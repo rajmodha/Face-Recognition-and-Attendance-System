@@ -11,84 +11,203 @@
     <div class="col-lg-12 mt-4">
         <div class="card p-4"> {# Added p-4 #}
             <h3 class="mb-3">Students</h3> {# Added mb-3 #}
+            <form class="search-bar"> {# Removed method and action #}
+                <input type="text" class="form-control" placeholder="Search by username, full name, stream, or semester" name="search_student" id="search_student_input"> {# Added id #}
+                <button class="btn btn-primary" type="submit" style="display: none;">Search</button> {# Hidden submit button #}
+            </form>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Full Name</th>
-                            <th>Username</th>
-                            <th>Stream</th>
-                            <th>Semester</th>
+                            <th class="sortable" data-sort-by="id" data-user-type="student">ID</th>
+                            <th class="sortable" data-sort-by="full_name" data-user-type="student">Full Name</th>
+                            <th class="sortable" data-sort-by="username" data-user-type="student">Username</th>
+                            <th class="sortable" data-sort-by="stream" data-user-type="student">Stream</th>
+                            <th class="sortable" data-sort-by="sem" data-user-type="student">Semester</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for user in students %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.full_name }}</td>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.stream or 'N/A' }}</td>
-                            <td>{{ user.sem or 'N/A' }}</td>
-                            <td>
-                                {% if user.is_approved %}
-                                    <span class="badge badge-success">Approved</span>
-                                {% else %}
-                                    <span class="badge badge-warning">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <form action="{{ url_for('edit_user', role='student', user_id=user.id) }}" method="GET" style="display:inline;">
-                                    <button type="submit" class="btn btn-sm btn-warning">Edit</button>
-                                </form>
-                                <form action="{{ url_for('delete_user', role='student', user_id=user.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="student_table_body"> {# Added id #}
+                        {# Initial data will be loaded by JavaScript #}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-    <div class="col-lg-12">
+
+    <div class="col-lg-12 mt-4">
         <div class="card p-4"> {# Added p-4 #}
             <h3 class="mb-3">Faculty</h3> {# Added mb-3 #}
+            <form class="search-bar"> {# Removed method and action #}
+                <input type="text" class="form-control" placeholder="Search by username, full name, or subject" name="search_faculty" id="search_faculty_input"> {# Added id #}
+                <button class="btn btn-primary" type="submit" style="display: none;">Search</button> {# Hidden submit button #}
+            </form>
             <div class="table-responsive">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Full Name</th>
-                            <th>Username</th>
-                            <th>Subject</th>
+                            <th class="sortable" data-sort-by="id" data-user-type="faculty">ID</th>
+                            <th class="sortable" data-sort-by="full_name" data-user-type="faculty">Full Name</th>
+                            <th class="sortable" data-sort-by="username" data-user-type="faculty">Username</th>
+                            <th class="sortable" data-sort-by="subject" data-user-type="faculty">Subject</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for user in faculties %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.full_name }}</td>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.subject or 'N/A' }}</td>
-                            <td>
-                                <form action="{{ url_for('edit_user', role='faculty', user_id=user.id) }}" method="GET" style="display:inline;">
-                                    <button type="submit" class="btn btn-sm btn-warning">Edit</button>
-                                </form>
-                                <form action="{{ url_for('delete_user', role='faculty', user_id=user.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="faculty_table_body"> {# Added id #}
+                        {# Initial data will be loaded by JavaScript #}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+<div class="row">
+<div class="col-lg-12 mt-4">
+        <div class="card p-4"> {# Added p-4 #}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="mb-0">Admins</h3>
+                <a href="{{ url_for('add_admin') }}" class="btn btn-primary">Add Admin</a>
+            </div>
+            <form class="search-bar"> {# Removed method and action #}
+                <input type="text" class="form-control" placeholder="Search by username or full name" name="search_admin" id="search_admin_input"> {# Added id #}
+                <button class="btn btn-primary" type="submit" style="display: none;">Search</button> {# Hidden submit button #}
+            </form>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort-by="id" data-user-type="admin">ID</th>
+                            <th class="sortable" data-sort-by="full_name" data-user-type="admin">Full Name</th>
+                            <th class="sortable" data-sort-by="username" data-user-type="admin">Username</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin_table_body"> {# Added id #}
+                        {# Initial data will be loaded by JavaScript #}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchStudentInput = document.getElementById('search_student_input');
+        const searchFacultyInput = document.getElementById('search_faculty_input');
+        const searchAdminInput = document.getElementById('search_admin_input');
+
+        const studentTableBody = document.getElementById('student_table_body');
+        const facultyTableBody = document.getElementById('faculty_table_body');
+        const adminTableBody = document.getElementById('admin_table_body');
+
+        const sortableHeaders = document.querySelectorAll('th.sortable');
+
+        // Store current sort state for each user type
+        const sortStates = {
+            student: { sortBy: 'id', sortOrder: 'asc' },
+            faculty: { sortBy: 'id', sortOrder: 'asc' },
+            admin: { sortBy: 'id', sortOrder: 'asc' }
+        };
+
+        function fetchAndRenderUsers(userType) {
+            let searchQuery = '';
+            let tableBody;
+
+            if (userType === 'student') {
+                searchQuery = searchStudentInput.value;
+                tableBody = studentTableBody;
+            } else if (userType === 'faculty') {
+                searchQuery = searchFacultyInput.value;
+                tableBody = facultyTableBody;
+            } else if (userType === 'admin') {
+                searchQuery = searchAdminInput.value;
+                tableBody = adminTableBody;
+            }
+
+            const sortBy = sortStates[userType].sortBy;
+            const sortOrder = sortStates[userType].sortOrder;
+
+            const url = `/admin/search_users?type=${userType}&search=${searchQuery}&sort_by=${sortBy}&sort_order=${sortOrder}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    tableBody.innerHTML = ''; // Clear existing rows
+                    data.forEach(user => {
+                        let row = '<tr>';
+                        if (userType === 'student') {
+                            row += `<td>${user.id}</td>`;
+                            row += `<td>${user.full_name}</td>`;
+                            row += `<td>${user.username}</td>`;
+                            row += `<td>${user.stream || 'N/A'}</td>`;
+                            row += `<td>${user.sem || 'N/A'}</td>`;
+                            row += `<td>${user.is_approved ? '<span class="badge badge-success">Approved</span>' : '<span class="badge badge-warning">Pending</span>'}</td>`;
+                        } else if (userType === 'faculty') {
+                            row += `<td>${user.id}</td>`;
+                            row += `<td>${user.full_name}</td>`;
+                            row += `<td>${user.username}</td>`;
+                            row += `<td>${user.subject || 'N/A'}</td>`;
+                        } else if (userType === 'admin') {
+                            row += `<td>${user.id}</td>`;
+                            row += `<td>${user.full_name}</td>`;
+                            row += `<td>${user.username}</td>`;
+                        }
+                        row += `<td>
+                            <form action="/admin/edit_user/${user.role}/${user.id}" method="GET" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-warning">Edit</button>
+                            </form>
+                            <form action="/admin/delete_user/${user.role}/${user.id}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>`;
+                        row += '</tr>';
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(error => console.error(`Error fetching ${userType} users:`, error));
+        }
+
+        // Event listeners for search inputs
+        searchStudentInput.addEventListener('keyup', () => fetchAndRenderUsers('student'));
+        searchFacultyInput.addEventListener('keyup', () => fetchAndRenderUsers('faculty'));
+        searchAdminInput.addEventListener('keyup', () => fetchAndRenderUsers('admin'));
+
+        // Event listeners for sortable headers
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const sortBy = this.dataset.sortBy;
+                const userType = this.dataset.userType;
+
+                // Reset sort indicators for other headers of the same type
+                document.querySelectorAll(`th.sortable[data-user-type="${userType}"]`).forEach(h => {
+                    if (h !== this) {
+                        h.classList.remove('asc', 'desc');
+                    }
+                });
+
+                if (sortStates[userType].sortBy === sortBy) {
+                    sortStates[userType].sortOrder = (sortStates[userType].sortOrder === 'asc' ? 'desc' : 'asc');
+                } else {
+                    sortStates[userType].sortBy = sortBy;
+                    sortStates[userType].sortOrder = 'asc'; // Default to asc when changing sort column
+                }
+
+                // Update UI to show current sort direction
+                this.classList.remove('asc', 'desc'); // Remove previous
+                this.classList.add(sortStates[userType].sortOrder); // Add current
+
+                fetchAndRenderUsers(userType);
+            });
+        });
+
+        // Initial load for all tables
+        fetchAndRenderUsers('student');
+        fetchAndRenderUsers('faculty');
+        fetchAndRenderUsers('admin');
+    });
+</script>
 {% endblock %}

@@ -10,7 +10,7 @@ from scipy.spatial import distance as dist
 from datetime import datetime
 import calendar
 import holidays
-from flask import Flask, render_template, request, redirect, url_for, flash, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -281,9 +281,30 @@ def add_student():
 def manage_users():
     if current_user.role != 'admin': 
         return redirect(url_for('index'))
-    faculties = Faculty.query.all()
-    students = Student.query.all()
-    return render_template('admin/manage_users.html', faculties=faculties, students=students)
+    return render_template('admin/manage_users.html')
+
+@app.route('/admin/add_admin', methods=['GET', 'POST'])
+@login_required
+def add_admin():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        username = request.form['username']
+        if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
+            flash('Username already exists. Please choose another.', 'danger')
+            return redirect(url_for('add_admin'))
+        
+        hashed_password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
+        new_admin = Admin(
+            username=username,
+            password=hashed_password,
+            full_name=request.form['full_name']
+        )
+        db.session.add(new_admin)
+        db.session.commit()
+        flash('Admin added successfully.', 'success')
+        return redirect(url_for('manage_users'))
+    return render_template('admin/add_admin.html')
 
 @app.route('/admin/edit_user/<role>/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -606,6 +627,50 @@ def view_attendance():
         return render_template('view_attendance.html', attendance_data=attendance_data, selected_date=selected_date, subjects=sorted(list(subjects_for_dropdown)), selected_subject=selected_subject)
 
 # --- Main Execution ---
+@app.route('/admin/search_users')
+@login_required
+def search_users():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    search_query = request.args.get('search', '')
+    user_type = request.args.get('type', 'student')
+
+    query = None
+    model = None
+
+    if user_type == 'admin':
+        model = Admin
+        query = Admin.query
+    elif user_type == 'faculty':
+        model = Faculty
+        query = Faculty.query
+    else:
+        model = Student
+        query = Student.query
+
+    if search_query:
+        search_term = f"%{search_query}%"
+        if user_type == 'student':
+            query = query.filter(db.or_(model.username.ilike(search_term), model.full_name.ilike(search_term), model.stream.ilike(search_term), model.sem.ilike(search_term)))
+        elif user_type == 'faculty':
+            query = query.filter(db.or_(model.username.ilike(search_term), model.full_name.ilike(search_term), model.subject.ilike(search_term)))
+        else:
+            query = query.filter(db.or_(model.username.ilike(search_term), model.full_name.ilike(search_term)))
+    sort_by = request.args.get('sort_by', 'id')
+    sort_order = request.args.get('sort_order', 'asc')
+
+    if hasattr(model, sort_by):
+        if sort_order == 'desc':
+            query = query.order_by(db.desc(getattr(model, sort_by)))
+        else:
+            query = query.order_by(getattr(model, sort_by))
+    
+    users = query.all()
+
+    return jsonify([user.to_dict() for user in users])
+
+
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True, port=8080)

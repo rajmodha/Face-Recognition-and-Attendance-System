@@ -186,6 +186,8 @@ main {
     padding: var(--spacing-lg);
     margin-bottom: var(--spacing-lg);
     border: 1px solid var(--border-color);
+    width: 100%;
+    position: relative;
 }
 
 .card-header {
@@ -769,4 +771,42 @@ main {
     .btn {
         padding: 0.7rem 1.5rem;
     }
+}
+
+/* --- Search Bar --- */
+.search-bar {
+    margin-bottom: 1.5rem;
+}
+
+.search-bar form {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.search-bar .form-control {
+    flex-grow: 1;
+    padding: 0.9rem 1.2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 50px; /* Rounded on the left */
+    font-size: 1rem;
+    color: var(--text-color);
+    background-color: var(--card-background);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
+}
+
+.search-bar .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.25);
+    outline: none;
+    z-index: 1;
+}
+
+.search-bar .btn {
+    border-radius: 0 50px 50px 0; /* Rounded on the right */
+    padding: 0.9rem 1.2rem;
+    background-color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    margin-left: -1px; /* Overlap the border */
 }
