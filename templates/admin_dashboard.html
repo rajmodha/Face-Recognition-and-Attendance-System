@@ -4,6 +4,7 @@
 <p class="lead mb-4">Welcome, {{ current_user.full_name }}!</p>
 
 <div class="dashboard-grid">
+<div class="row">
     <div class="card p-4">
         <h3 class="mb-3">Add New Faculty</h3>
         <form method="POST" action="{{ url_for('add_faculty') }}" enctype="multipart/form-data">
@@ -30,7 +31,7 @@
             <button type="submit" class="btn btn-primary">Add Faculty</button>
         </form>
     </div>
-
+    </div>
     <div class="card p-4">
         <h3 class="mb-3">Add New Student</h3>
         <form method="POST" action="{{ url_for('add_student') }}" enctype="multipart/form-data">
@@ -60,8 +61,8 @@
             </div>
             <button type="submit" class="btn btn-primary">Add Student</button>
         </form>
-    </div>
-
+    </div>        
+</div>
     <div class="card p-4">
         <h3 class="mb-3">Pending Student Registrations</h3> {# Added mb-3 #}
         {% if students %}
