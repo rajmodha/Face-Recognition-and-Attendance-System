@@ -187,7 +187,7 @@ main {
     margin-bottom: var(--spacing-lg);
     border: 1px solid var(--border-color);
     width: 100%;
-    position: relative;
+    
 }
 
 .card-header {
