@@ -317,14 +317,12 @@ def edit_user(role, user_id):
     elif role == 'faculty': user_model = Faculty
     elif role == 'student': user_model = Student
     user_to_edit = db.get_or_404(user_model, user_id)
-    original_full_name = user_to_edit.full_name
+    original_username = user_to_edit.username
     if request.method == 'POST':
-        new_full_name = request.form['full_name']
-        if original_full_name != new_full_name:
-            remove_user_encoding(original_full_name)
-            user_to_edit.full_name = new_full_name
-            add_user_encoding(user_to_edit)
+        user_to_edit.full_name = request.form['full_name']
         user_to_edit.username = request.form['username']
+        if original_username != user_to_edit.username:
+            remove_user_encoding(original_username)
         if role == 'student':
             user_to_edit.stream = request.form.get('stream')
             user_to_edit.sem = request.form.get('sem')
@@ -333,6 +331,7 @@ def edit_user(role, user_id):
         if request.form.get('password'):
             user_to_edit.password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
         db.session.commit()
+        add_user_encoding(user_to_edit) # Re-add with potentially new username
         flash(f'User {user_to_edit.username} updated successfully.', 'success')
         load_known_faces()
         return redirect(url_for('manage_users'))
@@ -348,7 +347,7 @@ def delete_user(role, user_id):
     elif role == 'faculty': user_model = Faculty
     elif role == 'student': user_model = Student
     user_to_delete = db.get_or_404(user_model, user_id)
-    user_full_name = user_to_delete.full_name
+    user_username = user_to_delete.username
     if hasattr(user_to_delete, 'image_path') and user_to_delete.image_path:
         try:
             image_path = os.path.join(project_dir, 'static', user_to_delete.image_path)
@@ -358,7 +357,7 @@ def delete_user(role, user_id):
             print(f"Error deleting image: {e}")
     db.session.delete(user_to_delete)
     db.session.commit()
-    remove_user_encoding(user_full_name)
+    remove_user_encoding(user_username)
     load_known_faces()
     flash(f'User {user_to_delete.username} has been deleted.', 'success')
     return redirect(url_for(request.form.get('redirect_to', 'manage_users')))

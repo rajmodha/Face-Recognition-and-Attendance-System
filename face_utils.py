@@ -36,19 +36,19 @@ def add_user_encoding(user):
         if encodings:
             known_face_data = _load_encodings()
             known_face_data["encodings"].append(encodings[0])
-            known_face_data["names"].append(user.full_name)
+            known_face_data["names"].append(user.username)
             _save_encodings(known_face_data)
             print(f"Encoding for {user.full_name} added successfully.")
     except Exception as e:
         print(f"Error adding encoding for {user.full_name}: {e}")
 
-def remove_user_encoding(user_full_name):
-    """Removes a user's face encoding from the pickle file by their full name."""
+def remove_user_encoding(username):
+    """Removes a user's face encoding from the pickle file by their username."""
     known_face_data = _load_encodings()
-    if user_full_name in known_face_data["names"]:
+    if username in known_face_data["names"]:
         indices_to_remove = []
         for i, name in enumerate(known_face_data["names"]):
-            if name == user_full_name:
+            if name == username:
                 indices_to_remove.append(i)
         
         for index in sorted(indices_to_remove, reverse=True):
@@ -56,7 +56,7 @@ def remove_user_encoding(user_full_name):
             del known_face_data["names"][index]
         
         _save_encodings(known_face_data)
-        print(f"Encoding for {user_full_name} removed successfully.")
+        print(f"Encoding for {username} removed successfully.")
 
 def generate_and_save_encodings():
     """
@@ -84,7 +84,7 @@ def generate_and_save_encodings():
                 
                 if encodings:
                     known_encodings.append(encodings[0])
-                    known_names.append(user.full_name)
+                    known_names.append(user.username)
             except Exception as e:
                 print(f"Error processing image for {user.full_name}: {e}")
 
