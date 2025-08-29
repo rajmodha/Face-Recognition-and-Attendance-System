@@ -24,6 +24,7 @@ app.config['SECRET_KEY'] = os.urandom(24).hex()
 
 # --- Database and File Path Configuration ---
 project_dir = os.path.dirname(os.path.abspath(__file__))
+data = os.path.join(project_dir, 'data')
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(project_dir, 'instance/face_attendance.db')}"
 app.config['UPLOAD_FOLDER'] = os.path.join(project_dir, 'static/uploads')
 ENCODINGS_PATH = os.path.join(project_dir, "known_faces.pkl")
@@ -118,7 +119,7 @@ def _draw_on_frame(frame, face_locations, face_names, marked_this_session):
 
 # --- Dlib Initializations and Helper Function ---
 # (This section remains the same)
-predictor_path = os.path.join(project_dir, "shape_predictor_68_face_landmarks.dat")
+predictor_path = os.path.join(project_dir, data, "shape_predictor_68_face_landmarks.dat")
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
 
