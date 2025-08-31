@@ -343,8 +343,9 @@ main {
     background-image: linear-gradient(45deg, var(--primary-color) 0%, #6F9FB8 100%);
 }
 .btn-primary:hover {
-    background-color: #4A7A94;
+    background-color: #e9ecef;
     background-image: linear-gradient(45deg, #4A7A94 0%, #608EAA 100%);
+    color: white
 }
 
 .btn-secondary {
@@ -354,6 +355,7 @@ main {
 .btn-secondary:hover {
     background-color: #5A6B7C;
     background-image: linear-gradient(45deg, #5A6B7C 0%, #708090 100%);
+    color: white;
 }
 
 .btn-success {
@@ -363,6 +365,7 @@ main {
 .btn-success:hover {
     background-color: #45A049;
     background-image: linear-gradient(45deg, #45A049 0%, #5CB860 100%);
+    color: white
 }
 
 .btn-danger {
@@ -376,12 +379,13 @@ main {
 
 .btn-warning {
     background-color: var(--accent-color);
-    color: white; /* White text for warning */
+    color: white;
     background-image: linear-gradient(45deg, var(--accent-color) 0%, #FF9800 100%);
 }
 .btn-warning:hover {
     background-color: #E65100;
     background-image: linear-gradient(45deg, #E65100 0%, #FB8C00 100%);
+    color: white
 }
 
 .btn-info {
@@ -391,6 +395,7 @@ main {
 .btn-info:hover {
     background-color: #7AA8A0;
     background-image: linear-gradient(45deg, #7AA8A0 0%, #90C2BC 100%);
+    color: white;
 }
 
 .btn-sm {

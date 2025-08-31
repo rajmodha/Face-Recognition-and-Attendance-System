@@ -660,38 +660,16 @@ def search_users():
     if current_user.role != 'admin':
         return jsonify({'error': 'Unauthorized'}), 401
 
-    search_query = request.args.get('search', '')
     user_type = request.args.get('type', 'student')
 
     query = None
-    model = None
 
     if user_type == 'admin':
-        model = Admin
         query = Admin.query
     elif user_type == 'faculty':
-        model = Faculty
         query = Faculty.query
     else:
-        model = Student
         query = Student.query
-
-    if search_query:
-        search_term = f"%{search_query}%"
-        if user_type == 'student':
-            query = query.filter(db.or_(model.username.ilike(search_term), model.full_name.ilike(search_term), model.stream.ilike(search_term), model.sem.ilike(search_term)))
-        elif user_type == 'faculty':
-            query = query.filter(db.or_(model.username.ilike(search_term), model.full_name.ilike(search_term), model.subject.ilike(search_term)))
-        else:
-            query = query.filter(db.or_(model.username.ilike(search_term), model.full_name.ilike(search_term)))
-    sort_by = request.args.get('sort_by', 'id')
-    sort_order = request.args.get('sort_order', 'asc')
-
-    if hasattr(model, sort_by):
-        if sort_order == 'desc':
-            query = query.order_by(db.desc(getattr(model, sort_by)))
-        else:
-            query = query.order_by(getattr(model, sort_by))
     
     users = query.all()
 
