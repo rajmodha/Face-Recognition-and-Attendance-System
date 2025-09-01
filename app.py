@@ -544,6 +544,12 @@ def mark_attendance(name, faculty_name, subject):
 
 # --- REVISED generate_frames FUNCTION ---
 def generate_frames(faculty_name, subject, student_names):
+
+    with app.app_context():
+        # --- Create a mapping from username to full_name ---
+        student_query = Student.query.filter(Student.full_name.in_(student_names)).all()
+        username_to_fullname = {student.username: student.full_name for student in student_query}
+
     video_capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     
     challenge_passed = False
@@ -616,18 +622,25 @@ def generate_frames(faculty_name, subject, student_names):
             marked_a_student_this_cycle = False
             
             for face_encoding in face_encodings:
-                name = "Unknown"
+                username = "Unknown" # Recognize username
                 if known_face_data["encodings"]:
                     matches = face_recognition.compare_faces(known_face_data["encodings"], face_encoding)
                     face_distances = face_recognition.face_distance(known_face_data["encodings"], face_encoding)
                     best_match_index = np.argmin(face_distances)
                     if matches[best_match_index]:
-                        name = known_face_data["names"][best_match_index]
-                        if name in student_names and name not in marked_students_for_subject:
-                            if mark_attendance(name, faculty_name, subject):
-                                marked_students_for_subject.add(name)
+                        username = known_face_data["names"][best_match_index]
+                        
+                        # --- Use the mapping to get the full name ---
+                        full_name = username_to_fullname.get(username)
+
+                        if full_name and full_name in student_names and full_name not in marked_students_for_subject:
+                            if mark_attendance(full_name, faculty_name, subject):
+                                marked_students_for_subject.add(full_name)
                                 marked_a_student_this_cycle = True
-                face_names.append(name)
+                
+                # Display the full name on the screen
+                name_to_display = username_to_fullname.get(username, "Unknown")
+                face_names.append(name_to_display)
 
             _draw_on_frame(frame, face_locations, face_names, marked_students_for_subject)
             
@@ -641,6 +654,7 @@ def generate_frames(faculty_name, subject, student_names):
                      recognition_done = True
                 elif face_locations and not is_known_face_present:
                      cv2.putText(frame, "Face Not Recognized.", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                     recognition_done = True
 
         ret, buffer = cv2.imencode('.jpg', frame)
         if recognition_done:
