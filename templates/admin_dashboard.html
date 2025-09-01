@@ -41,11 +41,11 @@
             </div>
             <div class="form-group">
                 <label for="student_username">Username</label>
-                <input type="text" id="student_username" name="username" required> {# Removed class="form-control" #}
+                <input type="text" id="student_username" name="username" required pattern="[a-z0-9_]+" title="Username must be in lowercase and without spaces."> {# Removed class="form-control" #}
             </div>
             <div class="form-group">
                 <label for="student_password">Password</label>
-                <input type="password" id="student_password" name="password" required> {# Removed class="form-control" #}
+                <input type="password" id="student_password" name="password" required minlength="8"> {# Removed class="form-control" #}
             </div>
             <div class="form-group">
                 <label for="student_stream">Stream</label>

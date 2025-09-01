@@ -63,6 +63,16 @@ def _create_student(form_data, file_storage, is_approved=False):
 
 def _create_faculty(form_data, file_storage, is_approved=True):
     username = form_data['username']
+    password = form_data['password']
+
+    if not username.islower() or ' ' in username:
+        flash('Username must be in lowercase and without spaces.', 'danger')
+        return None
+
+    if len(password) < 8:
+        flash('Password must be at least 8 characters long.', 'danger')
+        return None
+
     if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
         flash('Username already exists. Please choose another.', 'danger')
         return None
@@ -176,6 +186,17 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if not username.islower() or ' ' in username:
+            flash('Username must be in lowercase and without spaces.', 'danger')
+            return redirect(url_for('register'))
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long.', 'danger')
+            return redirect(url_for('register'))
+
         if _create_student(request.form, request.files):
             flash('Registration successful! Please wait for admin approval.', 'success')
             return redirect(url_for('login'))
@@ -318,6 +339,16 @@ def add_admin():
         return redirect(url_for('index'))
     if request.method == 'POST':
         username = request.form['username']
+        password = request.form['password']
+
+        if not username.islower() or ' ' in username:
+            flash('Username must be in lowercase and without spaces.', 'danger')
+            return redirect(url_for('add_admin'))
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long.', 'danger')
+            return redirect(url_for('add_admin'))
+
         if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
             flash('Username already exists. Please choose another.', 'danger')
             return redirect(url_for('add_admin'))
@@ -337,32 +368,88 @@ def add_admin():
 @app.route('/admin/edit_user/<role>/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def edit_user(role, user_id):
-    if current_user.role != 'admin': 
+    if current_user.role != 'admin':
         return redirect(url_for('index'))
-    user_model = None
-    if role == 'admin': user_model = Admin
-    elif role == 'faculty': user_model = Faculty
-    elif role == 'student': user_model = Student
+
+    user_model = {'admin': Admin, 'faculty': Faculty, 'student': Student}.get(role)
+    if not user_model:
+        flash('Invalid user role.', 'danger')
+        return redirect(url_for('manage_users'))
+
     user_to_edit = db.get_or_404(user_model, user_id)
     original_username = user_to_edit.username
+
     if request.method == 'POST':
-        user_to_edit.full_name = request.form['full_name']
-        user_to_edit.username = request.form['username']
-        if original_username != user_to_edit.username:
-            remove_user_encoding(original_username)
+        full_name = request.form.get('full_name', '').strip()
+        new_username = request.form.get('username', '').strip().lower()
+        new_password = request.form.get('password')
+
+        # --- Start Validation ---
+        if not full_name:
+            flash('Full Name cannot be empty.', 'danger')
+            return render_template('admin/edit_user.html', user=user_to_edit)
+
+        if not new_username:
+            flash('Username cannot be empty.', 'danger')
+            return render_template('admin/edit_user.html', user=user_to_edit)
+        
+        if ' ' in new_username:
+            flash('Username cannot contain spaces.', 'danger')
+            return render_template('admin/edit_user.html', user=user_to_edit)
+
+        # Check for username uniqueness if it has been changed
+        if new_username != original_username:
+            existing_user = Student.query.filter_by(username=new_username).first() or \
+                            Faculty.query.filter_by(username=new_username).first() or \
+                            Admin.query.filter_by(username=new_username).first()
+            if existing_user:
+                flash('Username already exists. Please choose another.', 'danger')
+                return render_template('admin/edit_user.html', user=user_to_edit)
+
+        if new_password and len(new_password) < 8:
+            flash('New password must be at least 8 characters long.', 'danger')
+            return render_template('admin/edit_user.html', user=user_to_edit)
+
+        # Role-specific validation
         if role == 'student':
-            user_to_edit.stream = request.form.get('stream')
-            user_to_edit.sem = request.form.get('sem')
+            stream = request.form.get('stream')
+            sem = request.form.get('sem')
+            if not stream:
+                flash('Stream cannot be empty for students.', 'danger')
+                return render_template('admin/edit_user.html', user=user_to_edit)
+            if not sem:
+                flash('Semester cannot be empty for students.', 'danger')
+                return render_template('admin/edit_user.html', user=user_to_edit)
+            user_to_edit.stream = stream
+            user_to_edit.sem = sem
         elif role == 'faculty':
-            user_to_edit.subject = request.form.get('subject')
-        if request.form.get('password'):
-            user_to_edit.password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
+            subject = request.form.get('subject', '').strip()
+            if not subject:
+                flash('Subject cannot be empty for faculty.', 'danger')
+                return render_template('admin/edit_user.html', user=user_to_edit)
+            user_to_edit.subject = subject
+        # --- End Validation ---
+
+        # Update user data
+        user_to_edit.full_name = full_name
+        user_to_edit.username = new_username
+
+        if new_password:
+            user_to_edit.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+
         db.session.commit()
-        add_user_encoding(user_to_edit) # Re-add with potentially new username
+
+        # Update face encoding if username changed
+        if original_username != new_username:
+            remove_user_encoding(original_username)
+            add_user_encoding(user_to_edit)
+            load_known_faces()
+
         flash(f'User {user_to_edit.username} updated successfully.', 'success')
-        load_known_faces()
         return redirect(url_for('manage_users'))
+
     return render_template('admin/edit_user.html', user=user_to_edit)
+
 
 @app.route('/admin/delete_user/<role>/<int:user_id>', methods=['POST'])
 @login_required
@@ -395,14 +482,25 @@ def admin_profile():
     if current_user.role != 'admin': 
         return redirect(url_for('index'))
     if request.method == 'POST':
+        new_username = request.form['username']
+        new_password = request.form.get('new_password')
+
+        if not new_username.islower() or ' ' in new_username:
+            flash('Username must be in lowercase and without spaces.', 'danger')
+            return redirect(url_for('admin_profile'))
+
+        if new_password and len(new_password) < 8:
+            flash('Password must be at least 8 characters long.', 'danger')
+            return redirect(url_for('admin_profile'))
+
         admin_user = db.get_or_404(Admin, current_user.id)
         if not check_password_hash(admin_user.password, request.form.get('current_password')):
             flash('Incorrect current password.', 'danger')
             return redirect(url_for('admin_profile'))
         admin_user.full_name = request.form['full_name']
-        admin_user.username = request.form['username']
-        if request.form.get('new_password'):
-            admin_user.password = generate_password_hash(request.form.get('new_password'), method='pbkdf2:sha256')
+        admin_user.username = new_username
+        if new_password:
+            admin_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
         db.session.commit()
         flash('Your profile has been updated successfully.', 'success')
         return redirect(url_for('admin_dashboard'))

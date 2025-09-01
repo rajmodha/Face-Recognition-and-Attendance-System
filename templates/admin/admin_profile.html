@@ -16,18 +16,18 @@
                     </div>
                     <div class="form-group">
                         <label for="username">Username</label>
-                        <input type="text" id="username" name="username" value="{{ current_user.username }}" required> {# Removed class="form-control" #}
+                        <input type="text" id="username" name="username" value="{{ current_user.username }}" required pattern="[a-z0-9_]+" title="Username must be in lowercase and without spaces."> {# Removed class="form-control" #}
                     </div>
                     <hr>
                     <p class="mb-3"><strong>Change Password</strong></p> {# Added mb-3 #}
                     <div class="form-group">
                         <label for="current_password">Current Password</label>
-                        <input type="password" id="current_password" name="current_password" required> {# Removed class="form-control" #}
+                        <input type="password" id="current_password" name="current_password" required minlength="8"> {# Removed class="form-control" #}
                         <small class="form-text text-muted">Required to make any changes.</small>
                     </div>
                     <div class="form-group">
                         <label for="new_password">New Password</label>
-                        <input type="password" id="new_password" name="new_password" placeholder="Leave blank to keep current password"> {# Removed class="form-control" #}
+                        <input type="password" id="new_password" name="new_password" placeholder="Leave blank to keep current password" required minlength="8"> {# Removed class="form-control" #}
                     </div>
                     <hr>
                     <button type="submit" class="btn btn-primary">Update Profile</button>
