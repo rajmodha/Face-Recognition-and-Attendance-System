@@ -144,7 +144,7 @@ $(document).ready(function() {
         "columns": [
             { "data": "id" }, { "data": "full_name" }, { "data": "username" },
             { "data": "stream", "defaultContent": "N/A" }, { "data": "sem", "defaultContent": "N/A" },
-            { "data": "is_approved", "searchable": false, "render": function(data) { return data ? '<span class="badge bg-success">Approved</span>' : '<span class="badge bg-warning text-dark">Pending</span>'; }},
+            { "data": "is_approved", "searchable": false, "render": function(data) { return data ? '<span class="badge badge-success">Approved</span>' : '<span class="badge badge-warning">Pending</span>'; }},
             { "data": null, "className": "actions-cell text-center", "orderable": false, "searchable": false, "render": function(data, type, row) {
                 return `<a href="/admin/edit_user/${row.role}/${row.id}" class="btn btn-sm btn-warning">Edit</a>
                         <form action="/admin/delete_user/${row.role}/${row.id}" method="POST" style="display:inline;" onsubmit="return confirm('Do you really want to delete this student record ?');"><button type="submit" class="btn btn-danger">Delete</button></form>`;

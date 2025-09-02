@@ -45,16 +45,27 @@ def add_user_encoding(user):
 def remove_user_encoding(username):
     """Removes a user's face encoding from the pickle file by their username."""
     known_face_data = _load_encodings()
-    if username in known_face_data["names"]:
-        indices_to_remove = []
-        for i, name in enumerate(known_face_data["names"]):
-            if name == username:
-                indices_to_remove.append(i)
-        
-        for index in sorted(indices_to_remove, reverse=True):
-            del known_face_data["encodings"][index]
-            del known_face_data["names"][index]
-        
+    
+    # Get the original lists
+    names = known_face_data.get("names", [])
+    encodings = known_face_data.get("encodings", [])
+
+    # Create a new list of pairs, excluding the user to be removed
+    filtered_pairs = [
+        (name, enc) for name, enc in zip(names, encodings) if name != username
+    ]
+
+    # If the list of pairs is shorter, it means the user was found and removed.
+    if len(filtered_pairs) < len(names):
+        # Handle the edge case of the list becoming empty after removal
+        if filtered_pairs:
+            # "Unzip" the pairs back into two separate lists and convert to lists
+            new_names, new_encodings = zip(*filtered_pairs)
+            known_face_data["names"] = list(new_names)
+            known_face_data["encodings"] = list(new_encodings)
+        else:
+            known_face_data["names"] = []
+            known_face_data["encodings"] = []
         _save_encodings(known_face_data)
         print(f"Encoding for {username} removed successfully.")
 
