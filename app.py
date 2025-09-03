@@ -27,7 +27,7 @@ project_dir = os.path.dirname(os.path.abspath(__file__))
 data = os.path.join(project_dir, 'data')
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(project_dir, 'instance/face_attendance.db')}"
 app.config['UPLOAD_FOLDER'] = os.path.join(project_dir, 'static/uploads')
-ENCODINGS_PATH = os.path.join(project_dir, "known_faces.pkl")
+ENCODINGS_PATH = os.path.join(data, "known_faces.pkl")
 
 db.init_app(app)
 
@@ -40,12 +40,29 @@ login_manager.login_view = 'login'
 # (Your _create_student and _create_faculty functions remain the same)
 def _create_student(form_data, file_storage, is_approved=False):
     username = form_data['username']
+    password = form_data['password']
+
+    # --- Username and Password Validation ---
+    if not username or not username.islower() or ' ' in username:
+        flash('Username must be in lowercase and without spaces.', 'danger')
+        return None
+
+    reserved_keywords = ['admin', 'faculty', 'student']
+    if any(keyword in username for keyword in reserved_keywords):
+        flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
+        return None
+
+    if len(password) < 8 or len(password) > 14:
+        flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
+        return None
+
     if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
         flash('Username already exists. Please choose another.', 'danger')
         return None
     if 'profile_pic' not in file_storage or not file_storage['profile_pic'].filename:
         flash('Profile picture is required.', 'danger')
         return None
+    
     file = file_storage['profile_pic']
     filename = secure_filename(file.filename)
     stream = form_data.get('stream', 'unknown')
@@ -55,7 +72,7 @@ def _create_student(form_data, file_storage, is_approved=False):
     save_path = os.path.join(student_upload_dir, filename)
     file.save(save_path)
     relative_path = os.path.join('uploads', 'students', stream, sem, filename)
-    hashed_password = generate_password_hash(form_data['password'], method='pbkdf2:sha256')
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
     new_student = Student(username=username, password=hashed_password, full_name=form_data['full_name'], stream=form_data.get('stream'), sem=form_data.get('sem'), image_path=relative_path, is_approved=is_approved)
     db.session.add(new_student)
     db.session.commit()
@@ -65,12 +82,18 @@ def _create_faculty(form_data, file_storage, is_approved=True):
     username = form_data['username']
     password = form_data['password']
 
-    if not username.islower() or ' ' in username:
+    # --- Username and Password Validation ---
+    if not username or not username.islower() or ' ' in username:
         flash('Username must be in lowercase and without spaces.', 'danger')
         return None
 
-    if len(password) < 8:
-        flash('Password must be at least 8 characters long.', 'danger')
+    reserved_keywords = ['admin', 'faculty', 'student']
+    if any(keyword in username for keyword in reserved_keywords):
+        flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
+        return None
+
+    if len(password) < 8 or len(password) > 14:
+        flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
         return None
 
     if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
@@ -129,7 +152,7 @@ def _draw_on_frame(frame, face_locations, face_names, marked_this_session):
 
 # --- Dlib Initializations and Helper Function ---
 # (This section remains the same)
-predictor_path = os.path.join(project_dir, data, "shape_predictor_68_face_landmarks.dat")
+predictor_path = os.path.join(data, "shape_predictor_68_face_landmarks.dat")
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
 
@@ -186,20 +209,12 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-
-        if not username.islower() or ' ' in username:
-            flash('Username must be in lowercase and without spaces.', 'danger')
-            return redirect(url_for('register'))
-
-        if len(password) < 8:
-            flash('Password must be at least 8 characters long.', 'danger')
-            return redirect(url_for('register'))
-
+        # The _create_student function handles all validation and flashes messages.
+        # If it returns a user object, registration was successful.
         if _create_student(request.form, request.files):
             flash('Registration successful! Please wait for admin approval.', 'success')
             return redirect(url_for('login'))
+        # On failure, the helper function flashes the error, and we re-render the form.
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -341,17 +356,23 @@ def add_admin():
         username = request.form['username']
         password = request.form['password']
 
-        if not username.islower() or ' ' in username:
+        # --- Username and Password Validation ---
+        if not username or not username.islower() or ' ' in username:
             flash('Username must be in lowercase and without spaces.', 'danger')
-            return redirect(url_for('add_admin'))
+            return render_template('admin/add_admin.html')
 
-        if len(password) < 8:
-            flash('Password must be at least 8 characters long.', 'danger')
-            return redirect(url_for('add_admin'))
+        reserved_keywords = ['admin', 'faculty', 'student']
+        if any(keyword in username for keyword in reserved_keywords):
+            flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
+            return render_template('admin/add_admin.html')
+
+        if len(password) < 8 or len(password) > 14:
+            flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
+            return render_template('admin/add_admin.html')
 
         if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
             flash('Username already exists. Please choose another.', 'danger')
-            return redirect(url_for('add_admin'))
+            return render_template('admin/add_admin.html')
         
         hashed_password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
         new_admin = Admin(
@@ -389,12 +410,13 @@ def edit_user(role, user_id):
             flash('Full Name cannot be empty.', 'danger')
             return render_template('admin/edit_user.html', user=user_to_edit)
 
-        if not new_username:
-            flash('Username cannot be empty.', 'danger')
+        if not new_username or not new_username.islower() or ' ' in new_username:
+            flash('Username must be in lowercase and without spaces.', 'danger')
             return render_template('admin/edit_user.html', user=user_to_edit)
-        
-        if ' ' in new_username:
-            flash('Username cannot contain spaces.', 'danger')
+
+        reserved_keywords = ['admin', 'faculty', 'student']
+        if any(keyword in new_username for keyword in reserved_keywords):
+            flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
             return render_template('admin/edit_user.html', user=user_to_edit)
 
         # Check for username uniqueness if it has been changed
@@ -406,8 +428,8 @@ def edit_user(role, user_id):
                 flash('Username already exists. Please choose another.', 'danger')
                 return render_template('admin/edit_user.html', user=user_to_edit)
 
-        if new_password and len(new_password) < 8:
-            flash('New password must be at least 8 characters long.', 'danger')
+        if new_password and (len(new_password) < 8 or len(new_password) > 14):
+            flash('New password must be at least 8 characters long and no more than 14 characters long.', 'danger')
             return render_template('admin/edit_user.html', user=user_to_edit)
 
         # Role-specific validation
@@ -485,18 +507,23 @@ def admin_profile():
         new_username = request.form['username']
         new_password = request.form.get('new_password')
 
-        if not new_username.islower() or ' ' in new_username:
+        if not new_username or not new_username.islower() or ' ' in new_username:
             flash('Username must be in lowercase and without spaces.', 'danger')
-            return redirect(url_for('admin_profile'))
+            return render_template('admin/admin_profile.html')
 
-        if new_password and len(new_password) < 8:
-            flash('Password must be at least 8 characters long.', 'danger')
-            return redirect(url_for('admin_profile'))
+        reserved_keywords = ['admin', 'faculty', 'student']
+        if any(keyword in new_username for keyword in reserved_keywords):
+            flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
+            return render_template('admin/admin_profile.html')
+
+        if new_password and (len(new_password) < 8 or len(new_password) > 14):
+            flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
+            return render_template('admin/admin_profile.html')
 
         admin_user = db.get_or_404(Admin, current_user.id)
         if not check_password_hash(admin_user.password, request.form.get('current_password')):
             flash('Incorrect current password.', 'danger')
-            return redirect(url_for('admin_profile'))
+            return render_template('admin/admin_profile.html')
         admin_user.full_name = request.form['full_name']
         admin_user.username = new_username
         if new_password:
