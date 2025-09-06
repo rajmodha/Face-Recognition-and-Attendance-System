@@ -36,7 +36,18 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- Helper Functions ---
+def get_available_cameras():
+    index = 0
+    arr = []
+    while True:
+        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        if not cap.read()[0]:
+            break
+        else:
+            arr.append(index)
+        cap.release()
+        index += 1
+    return arr
 # (Your _create_student and _create_faculty functions remain the same)
 def _create_student(form_data, file_storage, is_approved=False):
     username = form_data['username']
@@ -570,14 +581,14 @@ def mark_attendance(name, faculty_name, subject):
     return True
 
 # --- REVISED generate_frames FUNCTION ---
-def generate_frames(faculty_name, subject, student_names):
+def generate_frames(faculty_name, subject, student_names, camera_index=0):
 
     with app.app_context():
         # --- Create a mapping from username to full_name ---
         student_query = Student.query.filter(Student.full_name.in_(student_names)).all()
         username_to_fullname = {student.username: student.full_name for student in student_query}
 
-    video_capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    video_capture = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
     
     challenge_passed = False
     recognition_done = False
@@ -618,6 +629,7 @@ def generate_frames(faculty_name, subject, student_names):
         if not success:
             break
 
+        frame = cv2.flip(frame, 2)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         rects = detector(gray, 0)
         face_locations = []
@@ -710,7 +722,8 @@ def take_attendance():
     all_subjects = sorted(list(subjects))
     all_streams = sorted([str(item[0]) for item in db.session.query(Student.stream).distinct()])
     all_sems = sorted([str(item[0]) for item in db.session.query(Student.sem).distinct()])
-    return render_template('take_attendance.html', subjects=sorted(all_subjects), streams=all_streams, sems=all_sems)
+    available_cameras = get_available_cameras()
+    return render_template('take_attendance.html', subjects=sorted(all_subjects), streams=all_streams, sems=all_sems, cameras=available_cameras)
 
 
 # (The rest of your routes: video_feed, view_attendance, etc., remain the same)
@@ -721,6 +734,7 @@ def video_feed():
     subject = request.args.get('subject')
     stream = request.args.get('stream')
     sem = request.args.get('sem')
+    camera_index = int(request.args.get('camera', 0))
     
     query = Student.query
     if stream:
@@ -729,7 +743,7 @@ def video_feed():
         query = query.filter_by(sem=sem)
     
     student_names = {student.full_name for student in query.all()}
-    return Response(generate_frames(current_user.full_name, subject, student_names), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_frames(current_user.full_name, subject, student_names, camera_index), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/view_attendance', methods=['GET', 'POST'])
 @login_required

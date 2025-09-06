@@ -32,6 +32,15 @@
             </select>
         </div>
 
+        <div class="form-group">
+            <label for="camera">Select Camera:</label>
+            <select id="camera" name="camera">
+                {% for camera in cameras %}
+                    <option value="{{ camera }}">Camera {{ camera }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div id="statusMessage" class="alert alert-info" role="alert">
             Select filters and click "Start Scanning" to begin.
         </div>
@@ -55,11 +64,13 @@
         const subjectSelect = document.getElementById('subject');
         const streamSelect = document.getElementById('stream');
         const semSelect = document.getElementById('sem');
+        const cameraSelect = document.getElementById('camera');
 
         controlButton.addEventListener('click', function() {
             const subject = subjectSelect.value;
             const stream = streamSelect.value;
             const sem = semSelect.value;
+            const camera = cameraSelect.value;
 
             if (!subject || !stream || !sem) {
                 alert("Please select a subject, stream, and semester.");
@@ -73,7 +84,7 @@
                 // --- This runs when you click "Next Student" ---
                 // Reload the video feed to start a new liveness check cycle.
                 // A timestamp prevents the browser from caching the URL, ensuring a fresh request.
-                videoFeed.src = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&t=${new Date().getTime()}`;
+                videoFeed.src = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&camera=${camera}&t=${new Date().getTime()}`;
                 statusMessage.className = 'alert alert-info';
                 statusMessage.innerText = 'Ready for next student. Click again to start.';
             } else {
@@ -81,7 +92,7 @@
                 videoContainer.style.display = 'block';
                 
                 // Construct the initial URL to start the feed and reset the backend state
-                const initialUrl = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&start=true`;
+                const initialUrl = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&camera=${camera}&start=true`;
                 videoFeed.src = initialUrl;
                 
                 statusMessage.className = 'alert alert-warning';
@@ -96,6 +107,7 @@
                 subjectSelect.disabled = true;
                 streamSelect.disabled = true;
                 semSelect.disabled = true;
+                cameraSelect.disabled = true;
             }
         });
     });
