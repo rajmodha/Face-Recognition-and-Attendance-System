@@ -39,7 +39,7 @@
                                     {% endfor %}
                                 </ul>
                             {% elif day in holidays %}
-                                <p class="holiday-text">Holiday</p>
+                                <p class="holiday-text">{{ holidays[day] }}</p>
                             {% endif %}
                         </div>
                     {% endfor %}

@@ -739,10 +739,16 @@ def view_attendance():
         year = int(request.form.get('year', current_dt.year))
         month = int(request.form.get('month', current_dt.month))
         days_in_month = calendar.monthrange(year, month)[1]
-        sundays = [day for day in range(1, days_in_month + 1) if calendar.weekday(year, month, day) == calendar.SUNDAY]
+        holiday_info = {}
+        # Get Sundays
+        for day in range(1, days_in_month + 1):
+            if calendar.weekday(year, month, day) == calendar.SUNDAY:
+                holiday_info[day] = "Sunday"
+        # Get other holidays
         in_holidays = holidays.India(years=year)
-        indian_holidays_this_month = [date.day for date, name in in_holidays.items() if date.month == month]
-        all_holidays = sorted(list(set(sundays + indian_holidays_this_month)))
+        for date, name in in_holidays.items():
+            if date.year == year and date.month == month:
+                holiday_info[date.day] = name
         attendance_data = {}
         reports_dir = os.path.join(project_dir, 'attendance_reports')
         for day in range(1, days_in_month + 1):
@@ -762,7 +768,7 @@ def view_attendance():
                                 attendance_data[day].append(record_subject)
             except ValueError:
                 break
-        return render_template('view_attendance.html', year=year, month=month, days_in_month=days_in_month, holidays=all_holidays, attendance_data=attendance_data)
+        return render_template('view_attendance.html', year=year, month=month, days_in_month=days_in_month, holidays=holiday_info, attendance_data=attendance_data)
     else:
         selected_date = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
         selected_subject = request.form.get('subject', 'all')
