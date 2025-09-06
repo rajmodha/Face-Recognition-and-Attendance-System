@@ -36,40 +36,55 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+def _validate_user_credentials(username, password, existing_username=None):
+    """Validates username and password for new and existing users."""
+    if not username or not username.islower() or ' ' in username:
+        flash('Username must be in lowercase and without spaces.', 'danger')
+        return False
+
+    reserved_keywords = ['admin', 'faculty', 'student']
+    if any(keyword in username for keyword in reserved_keywords):
+        flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
+        return False
+
+    # For new users, password is required. For existing, it's optional.
+    if not existing_username and not password:
+        flash('Password is required.', 'danger')
+        return False
+        
+    if password and (len(password) < 8 or len(password) > 14):
+        flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
+        return False
+    
+    # If it's a new user or the username has changed
+    if not existing_username or username != existing_username:
+        if Student.query.filter_by(username=username).first() or \
+           Faculty.query.filter_by(username=username).first() or \
+           Admin.query.filter_by(username=username).first():
+            flash('Username already exists. Please choose another.', 'danger')
+            return False
+            
+    return True
+
 def get_available_cameras():
     index = 0
     arr = []
-    while True:
+    while index < 10:  # Check up to 10 camera indices
         cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
-        if not cap.read()[0]:
-            break
-        else:
+        if cap.isOpened():
             arr.append(index)
-        cap.release()
+            cap.release()
         index += 1
     return arr
+
 # (Your _create_student and _create_faculty functions remain the same)
 def _create_student(form_data, file_storage, is_approved=False):
     username = form_data['username']
     password = form_data['password']
 
-    # --- Username and Password Validation ---
-    if not username or not username.islower() or ' ' in username:
-        flash('Username must be in lowercase and without spaces.', 'danger')
+    if not _validate_user_credentials(username, password):
         return None
 
-    reserved_keywords = ['admin', 'faculty', 'student']
-    if any(keyword in username for keyword in reserved_keywords):
-        flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
-        return None
-
-    if len(password) < 8 or len(password) > 14:
-        flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
-        return None
-
-    if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
-        flash('Username already exists. Please choose another.', 'danger')
-        return None
     if 'profile_pic' not in file_storage or not file_storage['profile_pic'].filename:
         flash('Profile picture is required.', 'danger')
         return None
@@ -93,23 +108,9 @@ def _create_faculty(form_data, file_storage, is_approved=True):
     username = form_data['username']
     password = form_data['password']
 
-    # --- Username and Password Validation ---
-    if not username or not username.islower() or ' ' in username:
-        flash('Username must be in lowercase and without spaces.', 'danger')
+    if not _validate_user_credentials(username, password):
         return None
 
-    reserved_keywords = ['admin', 'faculty', 'student']
-    if any(keyword in username for keyword in reserved_keywords):
-        flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
-        return None
-
-    if len(password) < 8 or len(password) > 14:
-        flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
-        return None
-
-    if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
-        flash('Username already exists. Please choose another.', 'danger')
-        return None
     if 'profile_pic' not in file_storage or not file_storage['profile_pic'].filename:
         flash('Profile picture is required.', 'danger')
         return None
@@ -367,22 +368,7 @@ def add_admin():
         username = request.form['username']
         password = request.form['password']
 
-        # --- Username and Password Validation ---
-        if not username or not username.islower() or ' ' in username:
-            flash('Username must be in lowercase and without spaces.', 'danger')
-            return render_template('admin/add_admin.html')
-
-        reserved_keywords = ['admin', 'faculty', 'student']
-        if any(keyword in username for keyword in reserved_keywords):
-            flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
-            return render_template('admin/add_admin.html')
-
-        if len(password) < 8 or len(password) > 14:
-            flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
-            return render_template('admin/add_admin.html')
-
-        if Student.query.filter_by(username=username).first() or Faculty.query.filter_by(username=username).first() or Admin.query.filter_by(username=username).first():
-            flash('Username already exists. Please choose another.', 'danger')
+        if not _validate_user_credentials(username, password):
             return render_template('admin/add_admin.html')
         
         hashed_password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
@@ -416,31 +402,12 @@ def edit_user(role, user_id):
         new_username = request.form.get('username', '').strip().lower()
         new_password = request.form.get('password')
 
+        if not _validate_user_credentials(new_username, new_password, existing_username=original_username):
+            return render_template('admin/edit_user.html', user=user_to_edit)
+
         # --- Start Validation ---
         if not full_name:
             flash('Full Name cannot be empty.', 'danger')
-            return render_template('admin/edit_user.html', user=user_to_edit)
-
-        if not new_username or not new_username.islower() or ' ' in new_username:
-            flash('Username must be in lowercase and without spaces.', 'danger')
-            return render_template('admin/edit_user.html', user=user_to_edit)
-
-        reserved_keywords = ['admin', 'faculty', 'student']
-        if any(keyword in new_username for keyword in reserved_keywords):
-            flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
-            return render_template('admin/edit_user.html', user=user_to_edit)
-
-        # Check for username uniqueness if it has been changed
-        if new_username != original_username:
-            existing_user = Student.query.filter_by(username=new_username).first() or \
-                            Faculty.query.filter_by(username=new_username).first() or \
-                            Admin.query.filter_by(username=new_username).first()
-            if existing_user:
-                flash('Username already exists. Please choose another.', 'danger')
-                return render_template('admin/edit_user.html', user=user_to_edit)
-
-        if new_password and (len(new_password) < 8 or len(new_password) > 14):
-            flash('New password must be at least 8 characters long and no more than 14 characters long.', 'danger')
             return render_template('admin/edit_user.html', user=user_to_edit)
 
         # Role-specific validation
