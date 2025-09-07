@@ -1,14 +1,79 @@
 {% extends "layout.html" %}
 {% block content %}
 <div class="hero">
-    <h1>Welcome to the Face Recognition Attendance System</h1>
+    <h1>Welcome {% if current_user.is_authenticated %} {{current_user.full_name}}<br> {% endif %} to the Face Recognition Attendance System</h1>
     <p>
         An intelligent, seamless, and secure way to track attendance.
-        Log in or register to get started.
+        {% if not current_user.is_authenticated %}
+            Log in or register to get started.
+        {% else %}
+            Explore your dashboard and manage attendance.
+        {% endif %}
     </p>
     {% if not current_user.is_authenticated %}
     <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
     <a href="{{ url_for('register') }}" class="btn btn-secondary">Register as Student</a>
     {% endif %}
+</div>
+
+<div class="container">
+    <!-- Features Section -->
+    <div class="row text-center">
+        <div class="col-md-12">
+            <h2 class="mb-4">Key Features</h2>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h3 class="feature-icon">⚙️</h3>
+                    <h3 class="card-title">Automated Attendance</h3>
+                    <p class="card-text">Forget manual attendance. Our system automatically detects and marks attendance using facial recognition.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h3 class="feature-icon">📊</h3>
+                    <h3 class="card-title">Real-time Reporting</h3>
+                    <p class="card-text">Get real-time insights into attendance data. View and export attendance reports with ease.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h3 class="feature-icon">🔒</h3>
+                    <h3 class="card-title">Secure & Reliable</h3>
+                    <p class="card-text">Our system is built with security in mind, ensuring that your data is safe and the attendance process is reliable.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How it Works Section -->
+    <div class="row text-center mt-5">
+        <div class="col-md-12">
+            <h2 class="mb-4">How It Works</h2>
+        </div>
+        <div class="col-md-4">
+            <div class="how-it-works-step">
+                <h4>1. Register</h4>
+                <p>Create an account and upload your profile picture. The system will learn to recognize you.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="how-it-works-step">
+                <h4>2. Take Attendance</h4>
+                <p>Faculty can start an attendance session. The system will detect and recognize students in the camera feed.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="how-it-works-step">
+                <h4>3. View Reports</h4>
+                <p>View and manage attendance records. Get detailed reports on attendance for different subjects and classes.</p>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

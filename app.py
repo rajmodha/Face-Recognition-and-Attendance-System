@@ -218,6 +218,10 @@ with app.app_context():
 def index():
     return render_template('index.html')
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -247,12 +251,7 @@ def login():
                 return redirect(url_for('login'))
             login_user(user)
             flash('Logged in successfully!', 'success')
-            if user.role == 'admin': 
-                return redirect(url_for('admin_dashboard'))
-            elif user.role == 'faculty': 
-                return redirect(url_for('faculty_dashboard'))
-            else: 
-                return redirect(url_for('student_dashboard'))
+            return redirect(url_for('index'))
         flash('Login failed. Check your username and password.', 'danger')
     return render_template('login.html')
 
@@ -261,7 +260,7 @@ def login():
 def logout():
     logout_user()
     flash('You have been logged out.', 'info')
-    return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 @app.route('/admin/dashboard')
 @login_required
