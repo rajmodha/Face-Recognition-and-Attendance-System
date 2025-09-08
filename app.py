@@ -210,8 +210,15 @@ def load_known_faces():
     """Load face encodings from the pickle file."""
     global known_face_data
     if os.path.exists(ENCODINGS_PATH):
-        with open(ENCODINGS_PATH, 'rb') as f:
-            known_face_data = pickle.load(f)
+        try:
+            with open(ENCODINGS_PATH, 'rb') as f:
+                known_face_data = pickle.load(f)
+        except (pickle.UnpicklingError, EOFError) as e:
+            print(f"Error loading encoding file: {e}")
+            known_face_data = {"encodings": [], "names": []}
+        except Exception as e:
+            print(f"An unexpected error occurred while loading encodings: {e}")
+            known_face_data = {"encodings": [], "names": []}
 
 with app.app_context():
     load_known_faces()
@@ -317,7 +324,7 @@ def decline_student(student_id):
             image_path = os.path.join(project_dir, 'static', student.image_path)
             if os.path.exists(image_path):
                 os.remove(image_path)
-        except Exception as e:
+        except OSError as e:
             print(f"Error deleting image for {student.username}: {e}")
 
     # Remove encoding if it exists (using username as per recent changes)
@@ -468,7 +475,7 @@ def delete_user(role, user_id):
             image_path = os.path.join(project_dir, 'static', user_to_delete.image_path)
             if os.path.exists(image_path):
                 os.remove(image_path)
-        except Exception as e:
+        except OSError as e:
             print(f"Error deleting image: {e}")
     db.session.delete(user_to_delete)
     db.session.commit()
@@ -551,6 +558,14 @@ def mark_attendance(name, faculty_name, subject):
 # --- REVISED generate_frames FUNCTION ---
 def generate_frames(faculty_name, subject, student_names, camera_index=0):
 
+    # --- Dlib Predictor Check ---
+    if not os.path.exists(predictor_path):
+        error_img = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(error_img, "Error: Predictor file not found", (100, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        while True:
+            ret, buffer = cv2.imencode('.jpg', error_img)
+            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            
     with app.app_context():
         # --- Create a mapping from username to full_name ---
         student_query = Student.query.filter(Student.full_name.in_(student_names)).all()
@@ -575,11 +590,15 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
     reports_dir = os.path.join(project_dir, 'attendance_reports')
     today_file = os.path.join(reports_dir, f"attendance_{datetime.now().strftime('%Y-%m-%d')}.csv")
     if os.path.exists(today_file):
-        with open(today_file, 'r') as f:
-            for line in f.readlines()[1:]: # Skip header
-                parts = line.strip().split(',')
-                if len(parts) == 4 and parts[3] == subject:
-                    marked_students_for_subject.add(parts[0])
+        try:
+            with open(today_file, 'r') as f:
+                for line in f.readlines()[1:]: # Skip header
+                    parts = line.strip().split(',')
+                    if len(parts) == 4 and parts[3] == subject:
+                        marked_students_for_subject.add(parts[0])
+        except IOError as e:
+            print(f"Error reading attendance file: {e}")
+
 
     if not video_capture.isOpened():
         error_img = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -589,84 +608,92 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
     while True:
-        if recognition_done and last_frame_encoded:
-            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + last_frame_encoded + b'\r\n')
-            continue
+        try:
+            if recognition_done and last_frame_encoded:
+                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + last_frame_encoded + b'\r\n')
+                continue
 
-        success, frame = video_capture.read()
-        if not success:
+            success, frame = video_capture.read()
+            if not success:
+                break
+
+            frame = cv2.flip(frame, 2)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            rects = detector(gray, 0)
+            face_locations = []
+            face_names = []
+            
+            if not challenge_passed:
+                instruction_text = f"Blink {blinks_required} times ({blink_counter}/{blinks_required})"
+                cv2.putText(frame, instruction_text, (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                if rects:
+                    shape = predictor(gray, rects[0])
+                    shape = np.array([(shape.part(i).x, shape.part(i).y) for i in range(68)])
+                    leftEye = shape[lStart:lEnd]
+                    rightEye = shape[rStart:rEnd]
+                    ear = (eye_aspect_ratio(leftEye) + eye_aspect_ratio(rightEye)) / 2.0
+                    if ear < EYE_AR_THRESH:
+                        eye_closed_for_frames += 1
+                    else:
+                        if eye_closed_for_frames >= EYE_AR_CONSEC_FRAMES:
+                            blink_counter += 1
+                        eye_closed_for_frames = 0
+                if blink_counter >= blinks_required:
+                    challenge_passed = True
+            else:
+                cv2.putText(frame, "Liveness Check Passed!", (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0), 2)
+                small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+                rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+                face_locations = face_recognition.face_locations(rgb_small_frame)
+                face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+                marked_a_student_this_cycle = False
+                
+                for face_encoding in face_encodings:
+                    username = "Unknown" # Recognize username
+                    if known_face_data["encodings"]:
+                        matches = face_recognition.compare_faces(known_face_data["encodings"], face_encoding)
+                        face_distances = face_recognition.face_distance(known_face_data["encodings"], face_encoding)
+                        best_match_index = np.argmin(face_distances)
+                        if matches[best_match_index]:
+                            username = known_face_data["names"][best_match_index]
+                            
+                            # --- Use the mapping to get the full name ---
+                            full_name = username_to_fullname.get(username)
+
+                            if full_name and full_name in student_names and full_name not in marked_students_for_subject:
+                                try:
+                                    if mark_attendance(full_name, faculty_name, subject):
+                                        marked_students_for_subject.add(full_name)
+                                        marked_a_student_this_cycle = True
+                                except IOError as e:
+                                    print(f"Error marking attendance: {e}")
+                    
+                    # Display the full name on the screen
+                    name_to_display = username_to_fullname.get(username, "Unknown")
+                    face_names.append(name_to_display)
+
+                _draw_on_frame(frame, face_locations, face_names, marked_students_for_subject)
+                
+                if marked_a_student_this_cycle:
+                    cv2.putText(frame, "Marked! Click 'Next Student'", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255, 255, 0), 2)
+                    recognition_done = True
+                else:
+                    is_known_face_present = any(name != "Unknown" for name in face_names)
+                    if face_locations and is_known_face_present:
+                         cv2.putText(frame, "Already Marked. Click 'Next Student'.", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 165, 255), 2)
+                         recognition_done = True
+                    elif face_locations and not is_known_face_present:
+                         cv2.putText(frame, "Face Not Recognized.", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
+                         recognition_done = True
+
+            ret, buffer = cv2.imencode('.jpg', frame)
+            if recognition_done:
+                last_frame_encoded = buffer.tobytes()
+            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+        except cv2.error as e:
+            print(f"OpenCV error in generate_frames: {e}")
             break
 
-        frame = cv2.flip(frame, 2)
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        rects = detector(gray, 0)
-        face_locations = []
-        face_names = []
-        
-        if not challenge_passed:
-            instruction_text = f"Blink {blinks_required} times ({blink_counter}/{blinks_required})"
-            cv2.putText(frame, instruction_text, (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
-            if rects:
-                shape = predictor(gray, rects[0])
-                shape = np.array([(shape.part(i).x, shape.part(i).y) for i in range(68)])
-                leftEye = shape[lStart:lEnd]
-                rightEye = shape[rStart:rEnd]
-                ear = (eye_aspect_ratio(leftEye) + eye_aspect_ratio(rightEye)) / 2.0
-                if ear < EYE_AR_THRESH:
-                    eye_closed_for_frames += 1
-                else:
-                    if eye_closed_for_frames >= EYE_AR_CONSEC_FRAMES:
-                        blink_counter += 1
-                    eye_closed_for_frames = 0
-            if blink_counter >= blinks_required:
-                challenge_passed = True
-        else:
-            cv2.putText(frame, "Liveness Check Passed!", (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0), 2)
-            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-            rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-            face_locations = face_recognition.face_locations(rgb_small_frame)
-            face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-            marked_a_student_this_cycle = False
-            
-            for face_encoding in face_encodings:
-                username = "Unknown" # Recognize username
-                if known_face_data["encodings"]:
-                    matches = face_recognition.compare_faces(known_face_data["encodings"], face_encoding)
-                    face_distances = face_recognition.face_distance(known_face_data["encodings"], face_encoding)
-                    best_match_index = np.argmin(face_distances)
-                    if matches[best_match_index]:
-                        username = known_face_data["names"][best_match_index]
-                        
-                        # --- Use the mapping to get the full name ---
-                        full_name = username_to_fullname.get(username)
-
-                        if full_name and full_name in student_names and full_name not in marked_students_for_subject:
-                            if mark_attendance(full_name, faculty_name, subject):
-                                marked_students_for_subject.add(full_name)
-                                marked_a_student_this_cycle = True
-                
-                # Display the full name on the screen
-                name_to_display = username_to_fullname.get(username, "Unknown")
-                face_names.append(name_to_display)
-
-            _draw_on_frame(frame, face_locations, face_names, marked_students_for_subject)
-            
-            if marked_a_student_this_cycle:
-                cv2.putText(frame, "Marked! Click 'Next Student'", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255, 255, 0), 2)
-                recognition_done = True
-            else:
-                is_known_face_present = any(name != "Unknown" for name in face_names)
-                if face_locations and is_known_face_present:
-                     cv2.putText(frame, "Already Marked. Click 'Next Student'.", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 165, 255), 2)
-                     recognition_done = True
-                elif face_locations and not is_known_face_present:
-                     cv2.putText(frame, "Face Not Recognized.", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
-                     recognition_done = True
-
-        ret, buffer = cv2.imencode('.jpg', frame)
-        if recognition_done:
-            last_frame_encoded = buffer.tobytes()
-        yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
 # --- UPDATED take_attendance ROUTE ---
 @app.route('/take_attendance')
@@ -748,7 +775,8 @@ def view_attendance():
                                 if day not in attendance_data:
                                     attendance_data[day] = []
                                 attendance_data[day].append(record_subject)
-            except ValueError:
+            except (ValueError, IOError) as e:
+                print(f"Error processing attendance file for {date_to_check.strftime('%Y-%m-%d')}: {e}")
                 break
         return render_template('view_attendance.html', year=year, month=month, days_in_month=days_in_month, holidays=holiday_info, attendance_data=attendance_data)
     else:
@@ -765,19 +793,22 @@ def view_attendance():
         reports_dir = os.path.join(project_dir, 'attendance_reports')
         filename = os.path.join(reports_dir, f"attendance_{selected_date}.csv")
         if os.path.exists(filename):
-            with open(filename, 'r') as f:
-                next(f, None)
-                for line in f:
-                    parts = line.strip().split(',')
-                    if len(parts) < 4: continue
-                    record_name, record_timestamp, record_taken_by, record_subject = parts[0].strip(), parts[1].strip(), parts[2].strip(), parts[3].strip()
-                    if selected_subject != 'all' and record_subject != selected_subject:
-                        continue
-                    if current_user.role == 'faculty':
-                        faculty_subjects = [s.strip() for s in current_user.subject.split(',')]
-                        if record_subject not in faculty_subjects:
+            try:
+                with open(filename, 'r') as f:
+                    next(f, None)
+                    for line in f:
+                        parts = line.strip().split(',')
+                        if len(parts) < 4: continue
+                        record_name, record_timestamp, record_taken_by, record_subject = parts[0].strip(), parts[1].strip(), parts[2].strip(), parts[3].strip()
+                        if selected_subject != 'all' and record_subject != selected_subject:
                             continue
-                    attendance_data.append({'name': record_name, 'timestamp': record_timestamp, 'taken_by': record_taken_by, 'subject': record_subject})
+                        if current_user.role == 'faculty':
+                            faculty_subjects = [s.strip() for s in current_user.subject.split(',')]
+                            if record_subject not in faculty_subjects:
+                                continue
+                        attendance_data.append({'name': record_name, 'timestamp': record_timestamp, 'taken_by': record_taken_by, 'subject': record_subject})
+            except IOError as e:
+                print(f"Error reading attendance file {filename}: {e}")
         return render_template('view_attendance.html', attendance_data=attendance_data, selected_date=selected_date, subjects=sorted(list(subjects_for_dropdown)), selected_subject=selected_subject)
 
 # --- Main Execution ---
