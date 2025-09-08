@@ -18,6 +18,10 @@
                         <label for="username">Username</label>
                         <input type="text" id="username" name="username" value="{{ user.username }}" required> {# Removed class="form-control" #}
                     </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ user.email or '' }}"> {# Removed class="form-control" #}
+                    </div>
 
                     {% if user.role == 'student' %}
                     <div class="form-group">

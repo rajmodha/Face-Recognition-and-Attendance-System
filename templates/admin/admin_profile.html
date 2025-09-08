@@ -18,6 +18,10 @@
                         <label for="username">Username</label>
                         <input type="text" id="username" name="username" value="{{ current_user.username }}" required pattern="[a-z0-9_]+" title="Username must be in lowercase and without spaces."> {# Removed class="form-control" #}
                     </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ current_user.email or '' }}"> {# Removed class="form-control" #}
+                    </div>
                     <hr>
                     <a href="{{ url_for('change_password') }}" class="btn btn-info btn-sm mb-3">Change Password</a>
                     <hr>

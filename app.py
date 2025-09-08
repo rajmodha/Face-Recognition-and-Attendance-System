@@ -14,6 +14,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash, Res
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from flask_mail import Mail, Message
+import secrets
+from datetime import datetime, timedelta
 
 from database import db, Admin, Faculty, Student
 from face_utils import add_user_encoding, remove_user_encoding, generate_and_save_encodings, ENCODINGS_PATH
@@ -23,6 +26,43 @@ import dotenv
 dotenv.load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+
+# --- Flask-Mail Configuration ---
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+mail = Mail(app)
+
+def send_reset_email(user):
+    token = secrets.token_urlsafe(32)
+    user.reset_token = token
+    user.reset_token_expiration = datetime.utcnow() + timedelta(hours=1) # Token valid for 1 hour
+    db.session.commit()
+
+    msg = Message('Password Reset Request',
+                  sender=app.config['MAIL_DEFAULT_SENDER'],
+                  recipients=[user.username]) # Assuming username is email for password reset
+
+    reset_url = url_for('reset_token', token=token, _external=True)
+    msg.body = f'''To reset your password, visit the following link:
+{reset_url}
+
+If you did not make this request then simply ignore this email and no changes will be made.
+'''
+    mail.send(msg)
+
+def get_user_by_email(email):
+    user = Admin.query.filter_by(email=email).first()
+    if not user:
+        user = Faculty.query.filter_by(email=email).first()
+    if not user:
+        user = Student.query.filter_by(email=email).first()
+    return user
+
 
 # --- Database and File Path Configuration ---
 project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -83,7 +123,7 @@ def get_available_cameras():
     return arr
 
 # (Your _create_student and _create_faculty functions remain the same)
-def _create_student(form_data, file_storage, is_approved=False):
+def _create_student(form_data, file_storage, is_approved=False, email=None):
     username = form_data['username']
     password = form_data['password']
 
@@ -104,12 +144,12 @@ def _create_student(form_data, file_storage, is_approved=False):
     file.save(save_path)
     relative_path = os.path.join('uploads', 'students', stream, sem, filename)
     hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-    new_student = Student(username=username, password=hashed_password, full_name=form_data['full_name'], stream=form_data.get('stream'), sem=form_data.get('sem'), image_path=relative_path, is_approved=is_approved)
+    new_student = Student(username=username, password=hashed_password, full_name=form_data['full_name'], email=email, stream=form_data.get('stream'), sem=form_data.get('sem'), image_path=relative_path, is_approved=is_approved)
     db.session.add(new_student)
     db.session.commit()
     return new_student
 
-def _create_faculty(form_data, file_storage, is_approved=True):
+def _create_faculty(form_data, file_storage, is_approved=True, email=None):
     username = form_data['username']
     password = form_data['password']
 
@@ -127,7 +167,7 @@ def _create_faculty(form_data, file_storage, is_approved=True):
     file.save(save_path)
     relative_path = os.path.join('uploads', 'faculty', filename)
     hashed_password = generate_password_hash(form_data['password'], method='pbkdf2:sha256')
-    new_faculty = Faculty(username=username, password=hashed_password, full_name=form_data['full_name'], subject=form_data.get('subject'), image_path=relative_path)
+    new_faculty = Faculty(username=username, password=hashed_password, full_name=form_data['full_name'], email=email, subject=form_data.get('subject'), image_path=relative_path)
     db.session.add(new_faculty)
     db.session.commit()
     return new_faculty
@@ -239,7 +279,7 @@ def register():
     if request.method == 'POST':
         # The _create_student function handles all validation and flashes messages.
         # If it returns a user object, registration was successful.
-        if _create_student(request.form, request.files):
+        if _create_student(request.form, request.files, email=request.form.get('email')):
             flash('Registration successful! Please wait for admin approval.', 'success')
             return redirect(url_for('login'))
         # On failure, the helper function flashes the error, and we re-render the form.
@@ -266,6 +306,57 @@ def login():
             return redirect(url_for('index'))
         flash('Login failed. Check your username and password.', 'danger')
     return render_template('login.html')
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = get_user_by_email(email)
+        if user:
+            send_reset_email(user)
+        flash('If an account with that email exists, a password reset link has been sent.', 'info')
+        return redirect(url_for('login'))
+    return render_template('forgot_password.html')
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    user = Admin.query.filter_by(reset_token=token).first()
+    if not user:
+        user = Faculty.query.filter_by(reset_token=token).first()
+    if not user:
+        user = Student.query.filter_by(reset_token=token).first()
+
+    if not user or user.reset_token_expiration < datetime.utcnow():
+        flash('That is an invalid or expired token.', 'warning')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not password or not confirm_password:
+            flash('Password and confirm password are required.', 'danger')
+            return render_template('reset_password.html', token=token)
+
+        if password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return render_template('reset_password.html', token=token)
+
+        if not _validate_password_length(password):
+            return render_template('reset_password.html', token=token)
+
+        user.password = generate_password_hash(password, method='pbkdf2:sha256')
+        user.reset_token = None
+        user.reset_token_expiration = None
+        db.session.commit()
+        flash('Your password has been updated! You are now able to log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', token=token)
 
 @app.route('/logout')
 @login_required
@@ -395,7 +486,7 @@ def decline_student(student_id):
 def add_faculty():
     if current_user.role != 'admin': 
         return redirect(url_for('index'))
-    new_faculty = _create_faculty(request.form, request.files)
+    new_faculty = _create_faculty(request.form, request.files, email=request.form.get('email'))
     if new_faculty:
         flash('Faculty added successfully.', 'success')
         add_user_encoding(new_faculty)
@@ -407,7 +498,7 @@ def add_faculty():
 def add_student():
     if current_user.role != 'admin': 
         return redirect(url_for('index'))
-    new_student = _create_student(request.form, request.files, is_approved=True)
+    new_student = _create_student(request.form, request.files, is_approved=True, email=request.form.get('email'))
     if new_student:
         flash('Student added successfully and approved.', 'success')
         add_user_encoding(new_student)
@@ -437,7 +528,8 @@ def add_admin():
         new_admin = Admin(
             username=username,
             password=hashed_password,
-            full_name=request.form['full_name']
+            full_name=request.form['full_name'],
+            email=request.form.get('email')
         )
         db.session.add(new_admin)
         db.session.commit()
@@ -463,6 +555,7 @@ def edit_user(role, user_id):
         full_name = request.form.get('full_name', '').strip()
         new_username = request.form.get('username', '').strip().lower()
         new_password = request.form.get('password')
+        email = request.form.get('email')
 
         if not _validate_user_credentials(new_username, new_password, existing_username=original_username):
             return render_template('admin/edit_user.html', user=user_to_edit)
@@ -495,6 +588,7 @@ def edit_user(role, user_id):
         # Update user data
         user_to_edit.full_name = full_name
         user_to_edit.username = new_username
+        user_to_edit.email = email
 
         if new_password:
             user_to_edit.password = generate_password_hash(new_password, method='pbkdf2:sha256')

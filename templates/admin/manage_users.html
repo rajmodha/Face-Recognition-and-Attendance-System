@@ -74,6 +74,7 @@
                     <th style="width: 6%;">ID</th>
                     <th>Full Name</th>
                     <th>Username</th>
+                    <th>Email</th>
                     <th>Stream</th>
                     <th>Semester</th>
                     <th>Status</th>
@@ -99,6 +100,7 @@
                     <th style="width: 6%;">ID</th>
                     <th>Full Name</th>
                     <th>Username</th>
+                    <th>Email</th>
                     <th>Subject</th>
                     <th class="text-center" style="width: 15%;">Actions</th>
                 </tr>
@@ -123,6 +125,7 @@
                     <th style="width: 6%;">ID</th>
                     <th>Full Name</th>
                     <th>Username</th>
+                    <th>Email</th>
                     <th class="text-center" style="width: 15%;">Actions</th>
                 </tr>
             </thead>
@@ -142,7 +145,7 @@ $(document).ready(function() {
     const studentTable = $('#student-table').DataTable({
         "ajax": { "url": "{{ url_for('search_users') }}?type=student", "dataSrc": "" },
         "columns": [
-            { "data": "id" }, { "data": "full_name" }, { "data": "username" },
+            { "data": "id" }, { "data": "full_name" }, { "data": "username" }, { "data": "email", "defaultContent": "N/A" },
             { "data": "stream", "defaultContent": "N/A" }, { "data": "sem", "defaultContent": "N/A" },
             { "data": "is_approved", "searchable": false, "render": function(data) { return data ? '<span class="badge badge-success">Approved</span>' : '<span class="badge badge-warning">Pending</span>'; }},
             { "data": null, "className": "actions-cell text-center", "orderable": false, "searchable": false, "render": function(data, type, row) {
@@ -159,7 +162,7 @@ $(document).ready(function() {
     const facultyTable = $('#faculty-table').DataTable({
         "ajax": { "url": "{{ url_for('search_users') }}?type=faculty", "dataSrc": "" },
         "columns": [
-            { "data": "id" }, { "data": "full_name" }, { "data": "username" },
+            { "data": "id" }, { "data": "full_name" }, { "data": "username" }, { "data": "email", "defaultContent": "N/A" },
             { "data": "subject", "defaultContent": "N/A" },
             { "data": null, "className": "actions-cell text-center", "orderable": false, "searchable": false,"render": function(data, type, row) {
                 return `<a href="/admin/edit_user/${row.role}/${row.id}" class="btn btn-sm btn-warning">Edit</a>
@@ -175,7 +178,7 @@ $(document).ready(function() {
     const adminTable = $('#admin-table').DataTable({
         "ajax": { "url": "{{ url_for('search_users') }}?type=admin", "dataSrc": "" },
         "columns": [
-            { "data": "id" }, { "data": "full_name" }, { "data": "username" },
+            { "data": "id" }, { "data": "full_name" }, { "data": "username" }, { "data": "email", "defaultContent": "N/A" },
             { "data": null, "className": "actions-cell text-center", "orderable": false, "searchable": false, "render": function(data, type, row) {
                 return `<a href="/admin/edit_user/${row.role}/${row.id}" class="btn btn-sm btn-warning">Edit</a>
                         <form action="/admin/delete_user/${row.role}/${row.id}" method="POST" style="display:inline;" onsubmit="return confirm('Do you really want to delete this admin record ?');"><button type="submit" class="btn btn-danger">Delete</button></form>`;
