@@ -54,11 +54,8 @@ def _validate_user_credentials(username, password, existing_username=None):
         flash('Password is required.', 'danger')
         return False
         
-    if password and (len(password) < 8 or len(password) > 14):
-        flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
+    if password and not _validate_password_length(password):
         return False
-    
-    # If it's a new user or the username has changed
     if not existing_username or username != existing_username:
         if Student.query.filter_by(username=username).first() or \
            Faculty.query.filter_by(username=username).first() or \
@@ -66,6 +63,12 @@ def _validate_user_credentials(username, password, existing_username=None):
             flash('Username already exists. Please choose another.', 'danger')
             return False
             
+    return True
+
+def _validate_password_length(password):
+    if password and (len(password) < 8 or len(password) > 14):
+        flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
+        return False
     return True
 
 def get_available_cameras():
@@ -296,6 +299,57 @@ def student_dashboard():
         return redirect(url_for('index'))
     return render_template('student_dashboard.html')
 
+@app.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    user_model = None
+    if current_user.role == 'faculty':
+        user_model = Faculty
+    elif current_user.role == 'student':
+        user_model = Student
+    elif current_user.role == 'admin':
+        user_model = Admin
+    else:
+        flash('You are not authorized to change password.', 'danger')
+        return redirect(url_for('index'))
+
+    user = user_model.query.get(current_user.id)
+
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not check_password_hash(user.password, current_password):
+            flash('Incorrect current password.', 'danger')
+            return render_template('change_password.html')
+        
+        if not new_password or not confirm_password:
+            flash('New password and confirm password are required.', 'danger')
+            return render_template('change_password.html')
+
+        if new_password != confirm_password:
+            flash('New password and confirm password do not match.', 'danger')
+            return render_template('change_password.html')
+
+        if not _validate_password_length(new_password):
+            return render_template('change_password.html')
+
+        user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+        db.session.commit()
+        flash('Password updated successfully!', 'success')
+        
+        if current_user.role == 'faculty':
+            return redirect(url_for('faculty_dashboard'))
+        elif current_user.role == 'student':
+            return redirect(url_for('student_dashboard'))
+        elif current_user.role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        else:
+            return redirect(url_for('index'))
+
+    return render_template('change_password.html')
+
 @app.route('/admin/approve/<int:student_id>')
 @login_required
 def approve_student(student_id):
@@ -491,8 +545,9 @@ def admin_profile():
         return redirect(url_for('index'))
     if request.method == 'POST':
         new_username = request.form['username']
-        new_password = request.form.get('new_password')
+        full_name = request.form['full_name'] # Get full_name from form
 
+        # Validate username
         if not new_username or not new_username.islower() or ' ' in new_username:
             flash('Username must be in lowercase and without spaces.', 'danger')
             return render_template('admin/admin_profile.html')
@@ -502,18 +557,17 @@ def admin_profile():
             flash(f'Username cannot contain reserved words: {", ".join(reserved_keywords)}.', 'danger')
             return render_template('admin/admin_profile.html')
 
-        if new_password and (len(new_password) < 8 or len(new_password) > 14):
-            flash('Password must be at least 8 characters long and no more than 14 characters long.', 'danger')
-            return render_template('admin/admin_profile.html')
-
         admin_user = db.get_or_404(Admin, current_user.id)
-        if not check_password_hash(admin_user.password, request.form.get('current_password')):
-            flash('Incorrect current password.', 'danger')
-            return render_template('admin/admin_profile.html')
-        admin_user.full_name = request.form['full_name']
+        
+        # Check if username is being changed and if new username already exists
+        if new_username != admin_user.username:
+            if Admin.query.filter_by(username=new_username).first():
+                flash('Username already exists. Please choose another.', 'danger')
+                return render_template('admin/admin_profile.html')
+
+        admin_user.full_name = full_name
         admin_user.username = new_username
-        if new_password:
-            admin_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+        
         db.session.commit()
         flash('Your profile has been updated successfully.', 'success')
         return redirect(url_for('admin_dashboard'))

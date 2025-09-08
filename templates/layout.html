@@ -34,6 +34,7 @@
                                 </form>
                             </div>
                         </li>
+                        <li><a href="{{ url_for('about') }}">About Us</a></li>
                         <li class="dropdown">
                             <a href="javascript:void(0)" class="dropbtn">Account</a>
                             <div class="dropdown-content">
@@ -41,15 +42,28 @@
                                 <a href="{{ url_for('logout') }}">Logout</a>
                             </div>
                         </li>
+                        
                     {% elif current_user.role == 'faculty' %}
                         <li><a href="{{ url_for('faculty_dashboard') }}">Faculty Dashboard</a></li>
-                        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                        <li><a href="{{ url_for('about') }}">About Us</a></li>
+                        <li class="dropdown">
+                            <a href="javascript:void(0)" class="dropbtn">Account</a>
+                            <div class="dropdown-content">
+                                <a href="{{ url_for('change_password') }}">Change Password</a>
+                                <a href="{{ url_for('logout') }}">Logout</a>
+                            </div>
+                        </li>
                     {% else %}
                         <li><a href="{{ url_for('student_dashboard') }}">Student Dashboard</a></li>
-                        <li><a href="{{ url_for('view_attendance') }}">View Attendance</a></li>
-                        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                        <li><a href="{{ url_for('about') }}">About Us</a></li>
+                        <li class="dropdown">
+                            <a href="javascript:void(0)" class="dropbtn">Account</a>
+                            <div class="dropdown-content">
+                                <a href="{{ url_for('change_password') }}">Change Password</a>
+                                <a href="{{ url_for('logout') }}">Logout</a>
+                            </div>
+                        </li>
                     {% endif %}
-                    <li><a href="{{ url_for('about') }}">About</a></li>
                 {% endif %}
             </ul>
         </nav>
