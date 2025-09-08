@@ -17,10 +17,12 @@ from werkzeug.utils import secure_filename
 
 from database import db, Admin, Faculty, Student
 from face_utils import add_user_encoding, remove_user_encoding, generate_and_save_encodings, ENCODINGS_PATH
+import dotenv
 
 # --- App Initialization ---
+dotenv.load_dotenv()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24).hex()
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 # --- Database and File Path Configuration ---
 project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -69,8 +71,8 @@ def _validate_user_credentials(username, password, existing_username=None):
 def get_available_cameras():
     index = 0
     arr = []
-    while index < 10:  # Check up to 10 camera indices
-        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+    while index < 5:  # Check up to 5 camera indices
+        cap = cv2.VideoCapture(index, cv2.CAP_MSMF)
         if cap.isOpened():
             arr.append(index)
             cap.release()
@@ -554,7 +556,7 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
         student_query = Student.query.filter(Student.full_name.in_(student_names)).all()
         username_to_fullname = {student.username: student.full_name for student in student_query}
 
-    video_capture = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+    video_capture = cv2.VideoCapture(camera_index, cv2.CAP_MSMF)
     
     challenge_passed = False
     recognition_done = False
