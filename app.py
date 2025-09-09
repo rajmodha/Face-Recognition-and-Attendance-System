@@ -45,14 +45,13 @@ def send_reset_email(user):
 
     msg = Message('Password Reset Request',
                   sender=app.config['MAIL_DEFAULT_SENDER'],
-                  recipients=[user.username]) # Assuming username is email for password reset
+                  recipients=[user.email])
 
     reset_url = url_for('reset_token', token=token, _external=True)
     msg.body = f'''To reset your password, visit the following link:
-{reset_url}
-
-If you did not make this request then simply ignore this email and no changes will be made.
-'''
+    {reset_url}
+    If you did not make this request then simply ignore this email and no changes will be made.
+    '''
     mail.send(msg)
 
 def get_user_by_email(email):
