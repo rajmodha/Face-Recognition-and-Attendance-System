@@ -4,6 +4,13 @@
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
 <style>
+    /* Style to make table content more compact */
+    .table th, .table td {
+        padding: 0.5rem; /* Reduce padding */
+        font-size: 0.9rem; /* Reduce font size */
+        vertical-align: middle; /* Align content vertically */
+    }
+
     /* Your existing styles */
     .actions-cell {
         white-space: nowrap;
@@ -153,7 +160,7 @@ $(document).ready(function() {
                         <form action="/admin/delete_user/${row.role}/${row.id}" method="POST" style="display:inline;" onsubmit="return confirm('Do you really want to delete this student record ?');"><button type="submit" class="btn btn-danger">Delete</button></form>`;
             }}
         ],
-        "dom": 'rt<"d-flex justify-content-between mt-5"ip>'
+        "dom": 'lrt<"d-flex justify-content-between mt-5"ip>'
     });
     $('#search_student_input').on('keyup', function() {
         studentTable.search(this.value).draw();
@@ -169,7 +176,7 @@ $(document).ready(function() {
                         <form action="/admin/delete_user/${row.role}/${row.id}" method="POST" style="display:inline;" onsubmit="return confirm('Do you really want to delete this faculty record ?');"><button type="submit" class="btn btn-danger">Delete</button></form>`;
             }}
         ],
-        "dom": 'rt<"d-flex justify-content-between mt-5"ip>'
+        "dom": 'lrt<"d-flex justify-content-between mt-5"ip>'
     });
     $('#search_faculty_input').on('keyup', function() {
         facultyTable.search(this.value).draw();
@@ -184,7 +191,7 @@ $(document).ready(function() {
                         <form action="/admin/delete_user/${row.role}/${row.id}" method="POST" style="display:inline;" onsubmit="return confirm('Do you really want to delete this admin record ?');"><button type="submit" class="btn btn-danger">Delete</button></form>`;
             }}
         ],
-        "dom": 'rt<"d-flex justify-content-between mt-5"ip>'
+        "dom": 'lrt<"d-flex justify-content-between mt-5"ip>'
     });
     $('#search_admin_input').on('keyup', function() {
         adminTable.search(this.value).draw();
