@@ -718,7 +718,7 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
         student_query = Student.query.filter(Student.full_name.in_(student_names)).all()
         username_to_fullname = {student.username: student.full_name for student in student_query}
 
-    video_capture = cv2.VideoCapture(camera_index, cv2.CAP_MSMF)
+    video_capture = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
     
     challenge_passed = False
     recognition_done = False
