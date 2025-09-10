@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card p-4">
+        <h2 class="mb-4">Export Attendance Report</h2>
+        <p>Select the criteria below to generate an attendance report.</p>
+
+        <form id="export-form" method="POST" action="{{ url_for('export_attendance') }}" class="form-inline">
+            <div class="form-group mr-2">
+                <label for="start_date" class="mr-2">Start Date:</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" required style="border-radius: 5px;">
+            </div>
+
+            <div class="form-group mr-2">
+                <label for="end_date" class="mr-2">End Date:</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" required style="border-radius: 5px;">
+            </div>
+
+            <div class="form-group mr-2">
+                <label for="subject" class="mr-2">Subject:</label>
+                <select class="form-control" id="subject" name="subject" style="border-radius: 5px;">
+                    <option value="all" selected>All Subjects</option>
+                    {% for subject in subjects %}
+                        <option value="{{ subject }}">{{ subject }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Export Report</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById("export-form").addEventListener("submit", function() {
+        setTimeout(function() {
+            document.getElementById("export-form").reset();
+        }, 1000); // Reset form after 1 second to allow file download
+    });
+</script>
+{% endblock %}

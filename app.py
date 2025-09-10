@@ -10,7 +10,9 @@ from scipy.spatial import distance as dist
 from datetime import datetime
 import calendar
 import holidays
-from flask import Flask, render_template, request, redirect, url_for, flash, Response, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, jsonify, send_file
+import pandas as pd
+import io
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -958,7 +960,78 @@ def view_attendance():
                 print(f"Error reading attendance file {filename}: {e}")
         return render_template('view_attendance.html', attendance_data=attendance_data, selected_date=selected_date, subjects=sorted(list(subjects_for_dropdown)), selected_subject=selected_subject)
 
-# --- Main Execution ---
+@app.route('/export_attendance', methods=['GET', 'POST'])
+@login_required
+def export_attendance():
+    if current_user.role not in ['faculty', 'admin']:
+        flash('You are not authorized to export attendance reports.', 'danger')
+        return redirect(url_for('index'))
+
+    subjects = set()
+    if current_user.role == 'faculty':
+        if current_user.subject:
+            subjects.update([s.strip() for s in current_user.subject.split(',')])
+    elif current_user.role == 'admin':
+        all_faculty = Faculty.query.all()
+        for f in all_faculty:
+            if f.subject:
+                subjects.update([s.strip() for s in f.subject.split(',')])
+
+    if request.method == 'POST':
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+        subject = request.form.get('subject')
+
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        except ValueError:
+            flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+            return render_template('export_attendance.html', subjects=sorted(list(subjects)))
+
+        all_dfs = []
+        current_date = start_date
+        while current_date <= end_date:
+            filename = os.path.join(project_dir, 'attendance_reports', f"attendance_{current_date.strftime('%Y-%m-%d')}.csv")
+            if os.path.exists(filename):
+                try:
+                    df = pd.read_csv(filename)
+                    df['Date'] = current_date.strftime('%Y-%m-%d')
+                    all_dfs.append(df)
+                except Exception as e:
+                    print(f"Error reading {filename}: {e}")
+            current_date += timedelta(days=1)
+
+        if not all_dfs:
+            flash('No attendance data found for the selected criteria.', 'info')
+            return render_template('export_attendance.html', subjects=sorted(list(subjects)))
+
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+
+        if subject != 'all':
+            combined_df = combined_df[combined_df['Subject'] == subject]
+
+        if combined_df.empty:
+            flash('No attendance data found for the selected subject.', 'info')
+            return render_template('export_attendance.html', subjects=sorted(list(subjects)))
+
+        # Reorder columns to have 'Date' as the first column
+        cols = ['Date'] + [col for col in combined_df.columns if col != 'Date']
+        combined_df = combined_df[cols]
+
+        # Create an in-memory CSV file
+        output = io.StringIO()
+        combined_df.to_csv(output, index=False)
+        output.seek(0)
+
+        return send_file(
+            io.BytesIO(output.getvalue().encode()),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'attendance_report_{start_date_str}_to_{end_date_str}.csv'
+        )
+
+    return render_template('export_attendance.html', subjects=sorted(list(subjects)))
 @app.route('/admin/search_users')
 @login_required
 def search_users():

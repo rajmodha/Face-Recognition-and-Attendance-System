@@ -311,6 +311,7 @@ main {
     flex-wrap: wrap;
     gap: var(--spacing-md); /* Increased gap for inline forms */
     align-items: flex-end;
+    margin-top : var(--spacing-md);
 }
 
 .form-inline .form-group {
