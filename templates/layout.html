@@ -99,6 +99,30 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Active Navbar Link Logic
+            const navLinks = document.querySelectorAll('.nav-links a');
+            const currentPath = window.location.pathname;
+
+            navLinks.forEach(link => {
+                // Handle special case for root path '/'
+                if (currentPath === '/' && link.getAttribute('href') === '/') {
+                    link.classList.add('active');
+                } else if (currentPath !== '/' && link.getAttribute('href') !== '/' && currentPath.startsWith(link.getAttribute('href'))) {
+                    link.classList.add('active');
+                }
+
+                // Check if the link is part of a dropdown and its child is active
+                if (link.classList.contains('active')) {
+                    let parentDropdown = link.closest('.dropdown');
+                    if (parentDropdown) {
+                        let dropbtn = parentDropdown.querySelector('.dropbtn');
+                        if (dropbtn) {
+                            dropbtn.classList.add('active');
+                        }
+                    }
+                }
+            });
+
             const regenerateLink = document.getElementById('regenerateEncodingsLink');
             const regenerateFormNav = document.getElementById('regenerateEncodingsFormNav');
             const fullPageLoadingOverlay = document.getElementById('full-page-loading-overlay');

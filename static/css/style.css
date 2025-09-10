@@ -952,3 +952,15 @@ main {
     border: 1px solid var(--primary-color);
     margin-left: -1px; /* Overlap the border */
 }
+
+/* --- Active Navbar Link --- */
+.nav-links li a.active, .dropdown .dropbtn.active {
+    color: var(--primary-color);
+    background-color: rgba(var(--primary-color-rgb), 0.15); /* Slightly more prominent*/
+    border-bottom: 3px solid var(--primary-color); /* Underline effect */
+    padding-bottom: 0.5rem; /* Adjust padding to make space for underline */
+}
+
+.nav-links li a.active:hover, .dropdown .dropbtn.active:hover {
+    background-color: rgba(var(--primary-color-rgb), 0.2); /* Darker on hover */
+}
