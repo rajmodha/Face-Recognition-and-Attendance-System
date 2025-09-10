@@ -29,8 +29,8 @@
                             <a href="javascript:void(0)" class="dropbtn">Manage System</a>
                             <div class="dropdown-content">
                                 <a href="{{ url_for('manage_users') }}">Manage Users</a>
-                                <form action="{{ url_for('regenerate_encodings') }}" method="POST" style="display:block;">
-                                     <a href="{{ url_for('regenerate_encodings') }}">Regenerate Face Encodings</a>
+                                <form id="regenerateEncodingsFormNav" action="{{ url_for('regenerate_encodings') }}" method="POST" style="display:block;">
+                                     <a href="#" id="regenerateEncodingsLink" class="dropdown-item">Regenerate Face Encodings</a>
                                 </form>
                             </div>
                         </li>
@@ -74,7 +74,11 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                        <div class="alert alert-{{ category }}">
+                            <span class="alert-icon"></span>
+                            {{ message }}
+                            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+                        </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}
@@ -86,6 +90,31 @@
         <p>&copy; {{ current_year }} Face Recognition Attendance System. All Rights Reserved.</p>
     </footer>
 
+    <div id="full-page-loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Processing request. Please wait...</p>
+    </div>
+
     {% block scripts %}{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const regenerateLink = document.getElementById('regenerateEncodingsLink');
+            const regenerateFormNav = document.getElementById('regenerateEncodingsFormNav');
+            const fullPageLoadingOverlay = document.getElementById('full-page-loading-overlay');
+
+            if (regenerateLink && regenerateFormNav) {
+                regenerateLink.addEventListener('click', function(event) {
+                    event.preventDefault(); // Prevent default link navigation
+                    
+                    // Show loading overlay
+                    fullPageLoadingOverlay.style.display = 'flex';
+
+                    // Submit the form
+                    regenerateFormNav.submit();
+                });
+            }
+        });
+    </script>
 </body>
 </html>

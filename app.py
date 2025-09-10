@@ -866,8 +866,15 @@ def take_attendance():
     all_subjects = sorted(list(subjects))
     all_streams = sorted([str(item[0]) for item in db.session.query(Student.stream).distinct()])
     all_sems = sorted([str(item[0]) for item in db.session.query(Student.sem).distinct()])
+    return render_template('take_attendance.html', subjects=sorted(all_subjects), streams=all_streams, sems=all_sems)
+
+@app.route('/get_cameras')
+@login_required
+def get_cameras():
+    if current_user.role not in ['faculty', 'admin']:
+        return jsonify({'error': 'Unauthorized'}), 401
     available_cameras = get_available_cameras()
-    return render_template('take_attendance.html', subjects=sorted(all_subjects), streams=all_streams, sems=all_sems, cameras=available_cameras)
+    return jsonify({'cameras': available_cameras})
 
 
 # (The rest of your routes: video_feed, view_attendance, etc., remain the same)

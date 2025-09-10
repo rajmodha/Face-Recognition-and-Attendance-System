@@ -832,6 +832,89 @@ main {
     }
 }
 
+/* --- Flash Messages - Dismissible & Icons --- */
+.alert {
+    position: relative; /* For positioning the close button */
+    padding-right: calc(var(--spacing-lg) + 25px); /* Make space for close button */
+}
+
+.alert .closebtn {
+    margin-left: var(--spacing-md);
+    color: inherit; /* Inherit color from alert */
+    font-weight: bold;
+    float: right;
+    font-size: 22px;
+    line-height: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+    position: absolute;
+    right: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.alert .closebtn:hover {
+    color: #000; /* Darken on hover */
+}
+
+.alert-icon {
+    display: inline-block;
+    width: 20px; /* Adjust size as needed */
+    height: 20px;
+    margin-right: var(--spacing-sm);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin-bottom: 5px;
+}
+
+/* Specific icons (using simple unicode for now, can be replaced with SVG/Font Awesome) */
+.alert-success .alert-icon::before { content: "✅"; } /* Checkmark */
+.alert-danger .alert-icon::before { content: "❌"; } /* Cross */
+.alert-warning .alert-icon::before { content: "⚠️"; } /* Exclamation */
+.alert-info .alert-icon::before { content: "ℹ️"; } /* Info */
+
+/* --- Loading Spinner --- */
+.loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: var(--primary-color);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: var(--spacing-sm);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Loading Overlay --- */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+.loading-overlay p {
+    margin: 0;
+    font-weight: 600;
+}
+
 /* --- Search Bar --- */
 .search-bar {
     margin-bottom: 1.5rem;

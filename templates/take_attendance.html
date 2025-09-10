@@ -5,50 +5,59 @@
     <div class="card p-4">
         <h1 class="mb-4">Take Attendance</h1>
 
-        <div class="form-group">
-            <label for="subject">Select Subject:</label>
-            <select id="subject" name="subject">
-                {% for subject in subjects %}
-                    <option value="{{ subject }}">{{ subject }}</option>
-                {% endfor %}
-            </select>
+        <div id="initial-loading-overlay" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <p>Checking for available cameras...</p>
         </div>
 
-        <div class="form-group">
-            <label for="stream">Select Stream:</label>
-            <select id="stream" name="stream">
-                {% for stream in streams %}
-                    <option value="{{ stream }}">{{ stream }}</option>
-                {% endfor %}
-            </select>
-        </div>
+        <div id="attendance-form-container" style="display: none;">
+            <div class="form-group">
+                <label for="subject">Select Subject:</label>
+                <select id="subject" name="subject">
+                    {% for subject in subjects %}
+                        <option value="{{ subject }}">{{ subject }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <div class="form-group">
-            <label for="sem">Select Semester:</label>
-            <select id="sem" name="sem">
-                {% for sem in sems %}
-                    <option value="{{ sem }}">{{ sem }}</option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="form-group">
+                <label for="stream">Select Stream:</label>
+                <select id="stream" name="stream">
+                    {% for stream in streams %}
+                        <option value="{{ stream }}">{{ stream }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <div class="form-group">
-            <label for="camera">Select Camera:</label>
-            <select id="camera" name="camera">
-                {% for camera in cameras %}
-                    <option value="{{ camera }}">Camera {{ camera }}</option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="form-group">
+                <label for="sem">Select Semester:</label>
+                <select id="sem" name="sem">
+                    {% for sem in sems %}
+                        <option value="{{ sem }}">{{ sem }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <div id="statusMessage" class="alert alert-info" role="alert">
-            Select filters and click "Start Scanning" to begin.
-        </div>
+            <div class="form-group">
+                <label for="camera">Select Camera:</label>
+                <select id="camera" name="camera">
+                    <!-- Options will be loaded dynamically by JavaScript -->
+                </select>
+            </div>
 
-        <button id="controlButton" class="btn btn-primary mb-4">Start Scanning</button>
+            <div id="statusMessage" class="alert alert-info" role="alert">
+                Select filters and click "Start Scanning" to begin.
+            </div>
+
+            <button id="controlButton" class="btn btn-primary mb-4">Start Scanning</button>
+        </div>
         
         <div id="video-container" class="video-wrapper" style="display: none;">
             <img src="" id="video-feed" class="video-feed-img">
+            <div id="video-loading-overlay" class="loading-overlay" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>Initializing camera and face recognition...</p>
+            </div>
         </div>
     </div>
 </div>
@@ -57,6 +66,8 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const initialLoadingOverlay = document.getElementById('initial-loading-overlay');
+        const attendanceFormContainer = document.getElementById('attendance-form-container');
         const controlButton = document.getElementById('controlButton');
         const videoContainer = document.getElementById('video-container');
         const videoFeed = document.getElementById('video-feed');
@@ -65,6 +76,43 @@
         const streamSelect = document.getElementById('stream');
         const semSelect = document.getElementById('sem');
         const cameraSelect = document.getElementById('camera');
+        const videoLoadingOverlay = document.getElementById('video-loading-overlay');
+
+        // Function to fetch and populate cameras
+        function fetchCameras() {
+            fetch('{{ url_for("get_cameras") }}')
+                .then(response => response.json())
+                .then(data => {
+                    initialLoadingOverlay.style.display = 'none';
+                    attendanceFormContainer.style.display = 'block';
+
+                    if (data.cameras && data.cameras.length > 0) {
+                        cameraSelect.innerHTML = ''; // Clear existing options
+                        data.cameras.forEach(camera => {
+                            const option = document.createElement('option');
+                            option.value = camera;
+                            option.textContent = `Camera ${camera}`;
+                            cameraSelect.appendChild(option);
+                        });
+                        controlButton.disabled = false;
+                    } else {
+                        statusMessage.className = 'alert alert-danger';
+                        statusMessage.innerHTML = '<span class="alert-icon"></span> No cameras found. Please ensure a camera is connected and accessible.';
+                        controlButton.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching cameras:', error);
+                    initialLoadingOverlay.style.display = 'none';
+                    attendanceFormContainer.style.display = 'block';
+                    statusMessage.className = 'alert alert-danger';
+                    statusMessage.innerHTML = '<span class="alert-icon"></span> Error loading cameras. Please try again later.';
+                    controlButton.disabled = true;
+                });
+        }
+
+        // Fetch cameras on page load
+        fetchCameras();
 
         controlButton.addEventListener('click', function() {
             const subject = subjectSelect.value;
@@ -90,18 +138,23 @@
             } else {
                 // --- This runs when you click "Start Scanning" for the first time ---
                 videoContainer.style.display = 'block';
+                videoLoadingOverlay.style.display = 'flex'; // Show loading overlay
+                controlButton.disabled = true; // Disable button during loading
+                controlButton.textContent = 'Initializing...'; // Change button text
                 
                 // Construct the initial URL to start the feed and reset the backend state
                 const initialUrl = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&camera=${camera}&start=true`;
                 videoFeed.src = initialUrl;
                 
-                statusMessage.className = 'alert alert-warning';
-                statusMessage.innerText = 'Initializing... Please wait for instructions.';
-                
-                // Update button state
-                controlButton.textContent = 'Next Student';
-                controlButton.className = 'btn btn-success btn-lg';
-                controlButton.setAttribute('data-state', 'scanning');
+                videoFeed.onload = function() {
+                    videoLoadingOverlay.style.display = 'none'; // Hide loading overlay once image loads
+                    controlButton.disabled = false; // Re-enable button
+                    controlButton.textContent = 'Next Student';
+                    controlButton.className = 'btn btn-success btn-lg';
+                    controlButton.setAttribute('data-state', 'scanning');
+                    statusMessage.className = 'alert alert-warning';
+                    statusMessage.innerText = 'Initializing... Please wait for instructions.';
+                };
 
                 // Disable filters
                 subjectSelect.disabled = true;
