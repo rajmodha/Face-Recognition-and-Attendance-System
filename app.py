@@ -716,9 +716,9 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
             
     with app.app_context():
-        # --- Create a mapping from username to full_name ---
-        student_query = Student.query.filter(Student.full_name.in_(student_names)).all()
-        username_to_fullname = {student.username: student.full_name for student in student_query}
+        # --- Create a mapping from username to full_name for all approved students ---
+        all_approved_students = Student.query.filter_by(is_approved=True).all()
+        username_to_fullname = {student.username: student.full_name for student in all_approved_students}
 
     video_capture = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
     
@@ -818,7 +818,12 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
                                     print(f"Error marking attendance: {e}")
                     
                     # Display the full name on the screen
-                    name_to_display = username_to_fullname.get(username, "Unknown")
+                    name_to_display = "Unknown" # Default to Unknown
+                    if full_name: # If a known face was recognized
+                        name_to_display = full_name # Always display the full name
+                        if full_name not in student_names:
+                            # Student recognized but not in selected stream/sem
+                            cv2.putText(frame, "Not in selected stream/sem", (50, 150), cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 255, 255), 2)
                     face_names.append(name_to_display)
 
                 _draw_on_frame(frame, face_locations, face_names, marked_students_for_subject)
