@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
     <!-- Add Google Fonts for Inter and Montserrat -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">{% block styles %}{% endblock %}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+    {% block styles %}{% endblock %}
 <body>
     <header class="main-header">
         <nav class="navbar">
@@ -15,6 +17,7 @@
                 {% if not current_user.is_authenticated %}
                     <li><a href="{{ url_for('login') }}">Login</a></li>
                     <li><a href="{{ url_for('register') }}">Register</a></li>
+                    <li><a href="{{ url_for('about') }}">About Us</a></li>
                 {% else %}
                     {% if current_user.role == 'admin' %}
                         <li><a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a></li>

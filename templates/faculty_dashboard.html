@@ -1,19 +1,22 @@
 {% extends "layout.html" %}
+{% block title %}Faculty Dashboard{% endblock %}
 {% block content %}
 <h1 class="mb-4">Faculty Dashboard</h1>
 <p class="lead mb-4">Welcome, {{ current_user.full_name }}!</p>
 
-<div class="card mb-4 p-4"> {# Added p-4 #}
-    <h3 class="mb-3">Actions</h3> {# Added mb-3 #}
+<div class="card mb-4 p-4">
+    <h3 class="mb-3">Actions</h3>
     <a href="{{ url_for('take_attendance') }}" class="btn btn-primary">Take Student Attendance</a>
     <a href="{{ url_for('view_attendance') }}" class="btn btn-info">View Student Attendance</a>
 </div>
 
-<div class="card p-4"> {# Added p-4 #}
-    <h3 class="mb-3">Approved Students</h3> {# Added mb-3 #}
-    {% if students %}
-    <div class="table-responsive">
-        <table class="table">
+<div class="card p-4">
+    <h3 class="mb-3">Approved Students</h3>
+    <form class="search-bar" onsubmit="return false;">
+        <input type="text" class="form-control" placeholder="Search approved students..." id="search_approved_student_input">
+    </form>
+    <div class="table-responsive mt-3">
+        <table class="table table-striped table-hover" id="approved-student-table" style="width:100%">
             <thead>
                 <tr>
                     <th>Full Name</th>
@@ -22,20 +25,32 @@
                     <th>Semester</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for student in students %}
-                <tr>
-                    <td>{{ student.full_name }}</td>
-                    <td>{{ student.username }}</td>
-                    <td>{{ student.stream or 'N/A' }}</td>
-                    <td>{{ student.sem or 'N/A' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
-    {% else %}
-    <p>No approved students found.</p>
-    {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(document).ready(function() {
+    const approvedStudentTable = $('#approved-student-table').DataTable({
+        "ajax": { "url": "{{ url_for('get_approved_students') }}", "dataSrc": "" },
+        "columns": [
+            { "data": "full_name" },
+            { "data": "username" },
+            { "data": "stream" },
+            { "data": "sem" }
+        ],
+        "dom": 'lrt<"d-flex justify-content-between mt-5"ip>'
+    });
+
+    $('#search_approved_student_input').on('keyup', function() {
+        approvedStudentTable.search(this.value).draw();
+    });
+});
+</script>
 {% endblock %}

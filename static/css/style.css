@@ -964,3 +964,56 @@ main {
 .nav-links li a.active:hover, .dropdown .dropbtn.active:hover {
     background-color: rgba(var(--primary-color-rgb), 0.2); /* Darker on hover */
 }
+
+/* --- DataTables Custom Styling --- */
+
+/* Style to make table content more compact */
+.table th, .table td {
+    padding: 0.5rem; /* Reduce padding */
+    font-size: 0.9rem; /* Reduce font size */
+    vertical-align: middle; /* Align content vertically */
+}
+
+/* Custom actions cell styling */
+.actions-cell {
+    white-space: nowrap;
+}
+
+/* --- Custom Pagination Styling for DataTables --- */
+.dataTables_wrapper .pagination {
+    display: flex !important; 
+    justify-content: flex-end;
+    padding-left: 0;
+    list-style: none; 
+    margin: 0;
+}
+
+.dataTables_wrapper .paginate_button a {
+    padding: 0.5rem 0.9rem;
+    margin: 0 3px;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+    border: 1px solid transparent; 
+}
+
+.dataTables_wrapper .paginate_button:not(.active) a {
+    border-color: #dee2e6;
+}
+
+.dataTables_wrapper .paginate_button:not(.disabled) a:hover {
+    background-color: #e9ecef;
+    text-decoration: none;
+    color: #5a8dab;
+}
+
+.dataTables_wrapper .paginate_button.active a {
+    background-color: #5a8dab;
+    border-color: #6F9FB8;
+    color: white;
+}
+
+.dataTables_wrapper .paginate_button.disabled a {
+    color: #6c757d;
+    pointer-events: none; 
+    background-color: transparent;
+}

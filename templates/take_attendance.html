@@ -87,7 +87,7 @@
                     attendanceFormContainer.style.display = 'block';
 
                     if (data.cameras && data.cameras.length > 0) {
-                        cameraSelect.innerHTML = ''; // Clear existing options
+                        cameraSelect.innerHTML = '';
                         data.cameras.forEach(camera => {
                             const option = document.createElement('option');
                             option.value = camera;
@@ -138,17 +138,17 @@
             } else {
                 // --- This runs when you click "Start Scanning" for the first time ---
                 videoContainer.style.display = 'block';
-                videoLoadingOverlay.style.display = 'flex'; // Show loading overlay
-                controlButton.disabled = true; // Disable button during loading
-                controlButton.textContent = 'Initializing...'; // Change button text
+                videoLoadingOverlay.style.display = 'flex';
+                controlButton.disabled = true;
+                controlButton.textContent = 'Initializing...';
                 
                 // Construct the initial URL to start the feed and reset the backend state
                 const initialUrl = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&camera=${camera}&start=true`;
                 videoFeed.src = initialUrl;
                 
                 videoFeed.onload = function() {
-                    videoLoadingOverlay.style.display = 'none'; // Hide loading overlay once image loads
-                    controlButton.disabled = false; // Re-enable button
+                    videoLoadingOverlay.style.display = 'none';
+                    controlButton.disabled = false;
                     controlButton.textContent = 'Next Student';
                     controlButton.className = 'btn btn-success btn-lg';
                     controlButton.setAttribute('data-state', 'scanning');

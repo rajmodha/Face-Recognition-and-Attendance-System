@@ -1044,6 +1044,7 @@ def export_attendance():
         )
 
     return render_template('export_attendance.html', subjects=sorted(list(subjects)))
+
 @app.route('/admin/search_users')
 @login_required
 def search_users():
@@ -1055,7 +1056,7 @@ def search_users():
     query = None
 
     if user_type == 'admin':
-        query = Admin.query
+        query = Admin.query.filter(Admin.id != current_user.id)
     elif user_type == 'faculty':
         query = Faculty.query
     else:
@@ -1064,6 +1065,22 @@ def search_users():
     users = query.all()
 
     return jsonify([user.to_dict() for user in users])
+
+@app.route('/api/pending_students')
+@login_required
+def get_pending_students():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 401
+    pending_students = Student.query.filter_by(is_approved=False).all()
+    return jsonify([student.to_dict() for student in pending_students])
+
+@app.route('/api/approved_students')
+@login_required
+def get_approved_students():
+    if current_user.role not in ['admin', 'faculty']:
+        return jsonify({'error': 'Unauthorized'}), 401
+    approved_students = Student.query.filter_by(is_approved=True).all()
+    return jsonify([student.to_dict() for student in approved_students])
 
 
 if __name__ == '__main__':
