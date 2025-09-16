@@ -972,6 +972,12 @@ main {
     padding: 0.5rem; /* Reduce padding */
     font-size: 0.9rem; /* Reduce font size */
     vertical-align: middle; /* Align content vertically */
+    text-align: center;
+}
+
+.table td{
+    font-size: 17px;
+    font-weight: 700;
 }
 
 /* Custom actions cell styling */
