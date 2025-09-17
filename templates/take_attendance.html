@@ -46,10 +46,12 @@
             </div>
 
             <div id="statusMessage" class="alert alert-info" role="alert">
-                Select filters and click "Start Scanning" to begin.
+                Select filters and click "Start Session" to begin.
             </div>
 
-            <button id="controlButton" class="btn btn-primary mb-4">Start Scanning</button>
+            <button id="sessionButton" class="btn btn-primary mb-4">Start Session</button>
+            <button id="nextStudentButton" class="btn btn-success mb-4" style="display: none;">Next Student</button>
+
         </div>
         
         <div id="video-container" class="video-wrapper" style="display: none;">
@@ -68,7 +70,8 @@
     document.addEventListener('DOMContentLoaded', function() {
         const initialLoadingOverlay = document.getElementById('initial-loading-overlay');
         const attendanceFormContainer = document.getElementById('attendance-form-container');
-        const controlButton = document.getElementById('controlButton');
+        const sessionButton = document.getElementById('sessionButton');
+        const nextStudentButton = document.getElementById('nextStudentButton');
         const videoContainer = document.getElementById('video-container');
         const videoFeed = document.getElementById('video-feed');
         const statusMessage = document.getElementById('statusMessage');
@@ -78,7 +81,8 @@
         const cameraSelect = document.getElementById('camera');
         const videoLoadingOverlay = document.getElementById('video-loading-overlay');
 
-        // Function to fetch and populate cameras
+        let isSessionActive = false;
+
         function fetchCameras() {
             fetch('{{ url_for("get_cameras") }}')
                 .then(response => response.json())
@@ -94,11 +98,11 @@
                             option.textContent = `Camera ${camera}`;
                             cameraSelect.appendChild(option);
                         });
-                        controlButton.disabled = false;
+                        sessionButton.disabled = false;
                     } else {
                         statusMessage.className = 'alert alert-danger';
                         statusMessage.innerHTML = '<span class="alert-icon"></span> No cameras found. Please ensure a camera is connected and accessible.';
-                        controlButton.disabled = true;
+                        sessionButton.disabled = true;
                     }
                 })
                 .catch(error => {
@@ -107,53 +111,58 @@
                     attendanceFormContainer.style.display = 'block';
                     statusMessage.className = 'alert alert-danger';
                     statusMessage.innerHTML = '<span class="alert-icon"></span> Error loading cameras. Please try again later.';
-                    controlButton.disabled = true;
+                    sessionButton.disabled = true;
                 });
         }
 
-        // Fetch cameras on page load
         fetchCameras();
 
-        controlButton.addEventListener('click', function() {
-            const subject = subjectSelect.value;
-            const stream = streamSelect.value;
-            const sem = semSelect.value;
-            const camera = cameraSelect.value;
-
-            if (!subject || !stream || !sem) {
-                alert("Please select a subject, stream, and semester.");
-                return;
-            }
-
-            const currentState = controlButton.getAttribute('data-state');
-
-            if (currentState === 'scanning') {
-                controlButton.setAttribute('data-state', 'not scanning');
-                // --- This runs when you click "Next Student" ---
-                // Reload the video feed to start a new liveness check cycle.
-                // A timestamp prevents the browser from caching the URL, ensuring a fresh request.
-                videoFeed.src = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&camera=${camera}&t=${new Date().getTime()}`;
+        sessionButton.addEventListener('click', function() {
+            if (isSessionActive) {
+                // Stop the session
+                videoFeed.src = '';
+                videoContainer.style.display = 'none';
+                nextStudentButton.style.display = 'none';
+                sessionButton.textContent = 'Start Session';
+                sessionButton.className = 'btn btn-primary mb-4';
                 statusMessage.className = 'alert alert-info';
-                statusMessage.innerText = 'Ready for next student. Click again to start.';
+                statusMessage.innerText = 'Session stopped. Select filters and click "Start Session" to begin.';
+                isSessionActive = false;
+
+                // Re-enable filters
+                subjectSelect.disabled = false;
+                streamSelect.disabled = false;
+                semSelect.disabled = false;
+                cameraSelect.disabled = false;
             } else {
-                // --- This runs when you click "Start Scanning" for the first time ---
+                // Start the session
+                const subject = subjectSelect.value;
+                const stream = streamSelect.value;
+                const sem = semSelect.value;
+                const camera = cameraSelect.value;
+
+                if (!subject || !stream || !sem) {
+                    alert("Please select a subject, stream, and semester.");
+                    return;
+                }
+
                 videoContainer.style.display = 'block';
                 videoLoadingOverlay.style.display = 'flex';
-                controlButton.disabled = true;
-                controlButton.textContent = 'Initializing...';
-                
-                // Construct the initial URL to start the feed and reset the backend state
+                sessionButton.disabled = true;
+                sessionButton.textContent = 'Initializing...';
+
                 const initialUrl = `{{ url_for('video_feed') }}?subject=${subject}&stream=${stream}&sem=${sem}&camera=${camera}&start=true`;
                 videoFeed.src = initialUrl;
-                
+
                 videoFeed.onload = function() {
                     videoLoadingOverlay.style.display = 'none';
-                    controlButton.disabled = false;
-                    controlButton.textContent = 'Next Student';
-                    controlButton.className = 'btn btn-success btn-lg';
-                    controlButton.setAttribute('data-state', 'scanning');
+                    sessionButton.disabled = false;
+                    sessionButton.textContent = 'Stop Session';
+                    sessionButton.className = 'btn btn-danger mb-4';
+                    nextStudentButton.style.display = 'inline-block';
                     statusMessage.className = 'alert alert-warning';
-                    statusMessage.innerText = 'Initializing... Please wait for instructions.';
+                    statusMessage.innerText = 'Session started. Please wait for instructions.';
+                    isSessionActive = true;
                 };
 
                 // Disable filters
@@ -162,6 +171,31 @@
                 semSelect.disabled = true;
                 cameraSelect.disabled = true;
             }
+        });
+
+        nextStudentButton.addEventListener('click', function() {
+            fetch('{{ url_for("next_student") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusMessage.className = 'alert alert-info';
+                    statusMessage.innerText = 'Ready for next student. Please wait for instructions.';
+                } else {
+                    statusMessage.className = 'alert alert-danger';
+                    statusMessage.innerText = 'Error: Could not reset for next student.';
+                    console.error('Error resetting student state:', data.message);
+                }
+            })
+            .catch(error => {
+                statusMessage.className = 'alert alert-danger';
+                statusMessage.innerText = 'Error: Could not connect to the server.';
+                console.error('Fetch error:', error);
+            });
         });
     });
 </script>

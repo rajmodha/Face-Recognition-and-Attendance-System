@@ -704,9 +704,42 @@ def mark_attendance(name, faculty_name, subject):
         f.write(f'{name},{datetime.now().strftime("%I:%M:%S %p")},{faculty_name},{subject}\n')
     return True
 
-# --- REVISED generate_frames FUNCTION ---
-def generate_frames(faculty_name, subject, student_names, camera_index=0):
+# --- Attendance State Management ---
+ATTENDANCE_STATE = {}
 
+def reset_attendance_state(user_id):
+    """Resets the attendance state for a given user in-place."""
+    if user_id in ATTENDANCE_STATE:
+        state = ATTENDANCE_STATE[user_id]
+        state['challenge_passed'] = False
+        state['recognition_done'] = False
+        state['blink_counter'] = 0
+        state['eye_closed_for_frames'] = 0
+        state['last_frame_encoded'] = None
+    else:
+        ATTENDANCE_STATE[user_id] = {
+            'challenge_passed': False,
+            'recognition_done': False,
+            'blink_counter': 0,
+            'eye_closed_for_frames': 0,
+            'last_frame_encoded': None
+        }
+
+def get_attendance_state(user_id):
+    """Gets the attendance state for a given user, initializing if not present."""
+    if user_id not in ATTENDANCE_STATE:
+        reset_attendance_state(user_id)
+    return ATTENDANCE_STATE[user_id]
+
+
+# --- REVISED generate_frames FUNCTION ---
+def generate_frames(faculty_name, subject, student_names, camera_index=0, start_session=False, user_id=None):
+    if user_id is None:
+        return
+
+    if start_session:
+        reset_attendance_state(user_id)
+    state = get_attendance_state(user_id)
     # --- Dlib Predictor Check ---
     if not os.path.exists(predictor_path):
         error_img = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -722,13 +755,7 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
 
     video_capture = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
     
-    challenge_passed = False
-    recognition_done = False
-    last_frame_encoded = None
-    
     blinks_required = 2
-    blink_counter = 0
-    eye_closed_for_frames = 0
     EYE_AR_THRESH = 0.22
     EYE_AR_CONSEC_FRAMES = 3
     (lStart, lEnd) = (42, 48)
@@ -758,8 +785,8 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
 
     while True:
         try:
-            if recognition_done and last_frame_encoded:
-                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + last_frame_encoded + b'\r\n')
+            if state['recognition_done'] and state['last_frame_encoded']:
+                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + state['last_frame_encoded'] + b'\r\n')
                 continue
 
             success, frame = video_capture.read()
@@ -772,8 +799,8 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
             face_locations = []
             face_names = []
             
-            if not challenge_passed:
-                instruction_text = f"Blink {blinks_required} times ({blink_counter}/{blinks_required})"
+            if not state['challenge_passed']:
+                instruction_text = f"Blink {blinks_required} times ({state['blink_counter']}/{blinks_required})"
                 cv2.putText(frame, instruction_text, (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
                 if rects:
                     shape = predictor(gray, rects[0])
@@ -782,13 +809,13 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
                     rightEye = shape[rStart:rEnd]
                     ear = (eye_aspect_ratio(leftEye) + eye_aspect_ratio(rightEye)) / 2.0
                     if ear < EYE_AR_THRESH:
-                        eye_closed_for_frames += 1
+                        state['eye_closed_for_frames'] += 1
                     else:
-                        if eye_closed_for_frames >= EYE_AR_CONSEC_FRAMES:
-                            blink_counter += 1
-                        eye_closed_for_frames = 0
-                if blink_counter >= blinks_required:
-                    challenge_passed = True
+                        if state['eye_closed_for_frames'] >= EYE_AR_CONSEC_FRAMES:
+                            state['blink_counter'] += 1
+                        state['eye_closed_for_frames'] = 0
+                if state['blink_counter'] >= blinks_required:
+                    state['challenge_passed'] = True
             else:
                 cv2.putText(frame, "Liveness Check Passed!", (50, 50), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 0), 2)
                 small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
@@ -819,34 +846,48 @@ def generate_frames(faculty_name, subject, student_names, camera_index=0):
                     
                     # Display the full name on the screen
                     name_to_display = "Unknown" # Default to Unknown
-                    if full_name: # If a known face was recognized
+                    if 'full_name' in locals() and full_name: # If a known face was recognized
                         name_to_display = full_name # Always display the full name
                         if full_name not in student_names:
                             # Student recognized but not in selected stream/sem
-                            cv2.putText(frame, "Not in selected stream/sem", (50, 150), cv2.FONT_HERSHEY_DUPLEX, 0.7, (0, 255, 255), 2)
+                            cv2.putText(frame, "Not in selected stream/sem", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 255, 255), 2)
+                            state['recognition_done'] = True
                     face_names.append(name_to_display)
 
                 _draw_on_frame(frame, face_locations, face_names, marked_students_for_subject)
                 
                 if marked_a_student_this_cycle:
                     cv2.putText(frame, "Marked! Click 'Next Student'", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (255, 255, 0), 2)
-                    recognition_done = True
+                    state['recognition_done'] = True
                 else:
                     is_known_face_present = any(name != "Unknown" for name in face_names)
-                    if face_locations and is_known_face_present:
+                    if face_locations and is_known_face_present and full_name in student_names:
                          cv2.putText(frame, "Already Marked. Click 'Next Student'.", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 165, 255), 2)
-                         recognition_done = True
+                         state['recognition_done'] = True
                     elif face_locations and not is_known_face_present:
                          cv2.putText(frame, "Face Not Recognized.", (50, 100), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 0, 255), 2)
-                         recognition_done = True
+                         state['recognition_done'] = True
 
             ret, buffer = cv2.imencode('.jpg', frame)
-            if recognition_done:
-                last_frame_encoded = buffer.tobytes()
+            if state['recognition_done']:
+                state['last_frame_encoded'] = buffer.tobytes()
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
         except cv2.error as e:
             print(f"OpenCV error in generate_frames: {e}")
             break
+        except KeyError:
+            # This can happen if the user logs out and the state is cleared
+            break
+
+
+
+@app.route('/next_student', methods=['POST'])
+@login_required
+def next_student():
+    if current_user.role not in ['faculty', 'admin']:
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
+    reset_attendance_state(current_user.get_id())
+    return jsonify({'status': 'success', 'message': 'State reset for next student.'})
 
 
 # --- UPDATED take_attendance ROUTE ---
@@ -891,6 +932,8 @@ def video_feed():
     stream = request.args.get('stream')
     sem = request.args.get('sem')
     camera_index = int(request.args.get('camera', 0))
+    start_session = request.args.get('start') == 'true'
+    user_id = current_user.get_id()
     
     query = Student.query
     if stream:
@@ -899,7 +942,7 @@ def video_feed():
         query = query.filter_by(sem=sem)
     
     student_names = {student.full_name for student in query.all()}
-    return Response(generate_frames(current_user.full_name, subject, student_names, camera_index), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_frames(current_user.full_name, subject, student_names, camera_index, start_session=start_session, user_id=user_id), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/view_attendance', methods=['GET', 'POST'])
 @login_required

@@ -1,12 +1,10 @@
-# face_utils.py
-
+# Imports
 import face_recognition
 import pickle
 import os
 from database import Student, Faculty
 
 # Path to the file where face encodings are stored.
-# A pickle file is used to save Python objects to disk.
 ENCODINGS_PATH = os.path.join("data", "known_faces.pkl")
 
 def _load_encodings():
@@ -14,7 +12,6 @@ def _load_encodings():
     if os.path.exists(ENCODINGS_PATH):
         with open(ENCODINGS_PATH, "rb") as f:
             return pickle.load(f)
-    # If no file exists, return an empty structure.
     return {"encodings": [], "names": []}
 
 def _save_encodings(data):
@@ -25,7 +22,6 @@ def _save_encodings(data):
 def add_user_encoding(user):
     """
     Generates a face encoding from a user's image and adds it to the known faces.
-    A face encoding is a unique numerical representation of a face.
     """
     if not hasattr(user, 'image_path') or not user.image_path:
         return
@@ -57,21 +53,18 @@ def remove_user_encoding(username):
     names = known_face_data.get("names", [])
     encodings = known_face_data.get("encodings", [])
 
-    # Create a new list of (name, encoding) pairs, excluding the user to be removed.
-    # This is a safe way to rebuild the lists without the specified user.
+    # Rebuild the lists excluding the user to be removed.
     filtered_pairs = [
         (name, enc) for name, enc in zip(names, encodings) if name != username
     ]
 
-    # If the new list of pairs is shorter, it means the user was found and removed.
+    # If the user was found and removed, update the encodings file.
     if len(filtered_pairs) < len(names):
-        # If the list is not empty after removal, "unzip" it back into two lists.
         if filtered_pairs:
             new_names, new_encodings = zip(*filtered_pairs)
             known_face_data["names"] = list(new_names)
             known_face_data["encodings"] = list(new_encodings)
         else:
-            # If the list is now empty, clear the original data.
             known_face_data["names"] = []
             known_face_data["encodings"] = []
 
@@ -83,8 +76,7 @@ def remove_user_encoding(username):
 def generate_and_save_encodings():
     """
     Re-creates all face encodings from scratch using images of approved users.
-    This function overwrites the existing encodings file and requires a Flask
-    app context to access the database.
+    This function overwrites the existing encodings file.
     """
     print("Regenerating all face encodings from the database...")
 

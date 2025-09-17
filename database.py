@@ -1,11 +1,8 @@
-# database.py
-
 # Importing required libraries
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 
 # Create a SQLAlchemy database instance.
-# This object is the main entry point for interacting with the database.
 db = SQLAlchemy()
 
 # Defines the Admin user model for the database.
@@ -20,11 +17,13 @@ class Admin(UserMixin, db.Model):
     password = db.Column(db.String(150), nullable=False)
     # 'full_name' stores the full name of the admin.
     full_name = db.Column(db.String(150), nullable=False)
-
+    # 'email' stores the email of the user, must be unique.
     email = db.Column(db.String(150), unique=True, nullable=True)
     # 'role' defines the user's role, defaulting to 'admin'.
     role = db.Column(db.String(50), nullable=False, default='admin')
+    # 'reset_token' stores the token for resetting the password.
     reset_token = db.Column(db.String(100), nullable=True)
+    # 'reset_token_expiration' stores the expiration date and time of the reset token.
     reset_token_expiration = db.Column(db.DateTime, nullable=True)
 
     def get_id(self):
@@ -64,7 +63,7 @@ class Faculty(UserMixin, db.Model):
     password = db.Column(db.String(150), nullable=False)
     # 'full_name' stores the full name of the faculty member.
     full_name = db.Column(db.String(150), nullable=False)
-
+    # 'email' stores the email of the user, must be unique.
     email = db.Column(db.String(150), unique=True, nullable=True)
     # 'subject' stores the subject(s) taught by the faculty member.
     subject = db.Column(db.String(200), nullable=False)
@@ -72,7 +71,9 @@ class Faculty(UserMixin, db.Model):
     image_path = db.Column(db.String(200), nullable=True)
     # 'role' defines the user's role, defaulting to 'faculty'.
     role = db.Column(db.String(50), nullable=False, default='faculty')
+    # 'reset_token' stores the token for resetting the password.
     reset_token = db.Column(db.String(100), nullable=True)
+    # 'reset_token_expiration' stores the expiration date and time of the reset token.
     reset_token_expiration = db.Column(db.DateTime, nullable=True)
 
     def get_id(self):
@@ -104,7 +105,7 @@ class Student(UserMixin, db.Model):
     password = db.Column(db.String(150), nullable=False)
     # 'full_name' stores the full name of the student.
     full_name = db.Column(db.String(150), nullable=False)
-
+    # 'email' stores the email of the user, must be unique.
     email = db.Column(db.String(150), unique=True, nullable=True)
     # 'stream' stores the academic stream of the student (e.g., 'Computer Science').
     stream = db.Column(db.String(100), nullable=False)
@@ -116,7 +117,9 @@ class Student(UserMixin, db.Model):
     is_approved = db.Column(db.Boolean, default=False)
     # 'role' defines the user's role, defaulting to 'student'.
     role = db.Column(db.String(50), nullable=False, default='student')
+    # 'reset_token' stores the token for resetting the password.
     reset_token = db.Column(db.String(100), nullable=True)
+    # 'reset_token_expiration' stores the expiration date and time of the reset token.
     reset_token_expiration = db.Column(db.DateTime, nullable=True)
 
     def get_id(self):
