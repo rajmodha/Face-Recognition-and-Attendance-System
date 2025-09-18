@@ -104,6 +104,7 @@
             <table class="table table-striped table-hover" id="pending-student-table" style="width:100%">
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Full Name</th>
                         <th>Username</th>
                         <th>Stream</th>
@@ -127,6 +128,7 @@ $(document).ready(function() {
     const pendingStudentTable = $('#pending-student-table').DataTable({
         "ajax": { "url": "{{ url_for('get_pending_students') }}", "dataSrc": "" },
         "columns": [
+            { "data": "id" },
             { "data": "full_name" },
             { "data": "username" },
             { "data": "stream" },
