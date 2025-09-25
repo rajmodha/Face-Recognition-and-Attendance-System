@@ -640,7 +640,7 @@ def change_password():
 
     return render_template('change_password.html')
 
-@app.route('/admin/approve/<int:student_id>')
+@app.route('/admin/approve_student/<int:student_id>')
 @login_required
 def approve_student(student_id):
     """Approves a pending student registration."""
@@ -1117,7 +1117,7 @@ def get_pending_students():
 @login_required
 def get_approved_students():
     """API endpoint to get a list of approved students."""
-    if current_user.role not in ['faculty', 'admin']:
+    if current_user.role not in ['admin', 'faculty']:
         return jsonify({'error': 'Unauthorized'}), 401
     approved_students = Student.query.filter_by(is_approved=True).all()
     return jsonify([student.to_dict() for student in approved_students])
