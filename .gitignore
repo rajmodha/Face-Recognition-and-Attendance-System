@@ -1,0 +1,44 @@
+# Environment & Secret Configurations
+.env
+*.env
+
+# Python Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE & Editor Directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database & Biometric Encoded Data
+instance/*.db
+instance/*.sqlite3
+data/known_faces.pkl
+data/shape_predictor_68_face_landmarks.dat
+
+# User Uploaded Photos
+static/uploads/students/*
+static/uploads/faculty/*
+!static/uploads/students/.gitkeep
+!static/uploads/faculty/.gitkeep
+
+# Activity Logs & Attendance CSV Reports
+.activity-logs/
+attendance_reports/*.csv
+!attendance_reports/.gitkeep
+
+# Precompiled Binaries
+dlib/*.whl
+
+# OS Metadata Files
+.DS_Store
+Thumbs.db
